@@ -13,7 +13,7 @@
 | S1-T04 | GAS 코어 | DONE | UMetaCombatAttributeSet, UMetaDamageExecution(3.2 1~4단계), 반사·사망 이벤트(5~6단계), GE 12종 C++. 빌드 경고 0. 테스트 8/8 통과 (Combat 5종 신규) |
 | S1-T05 | 플레이어 | DONE | AMetaCharacterBase/AMetaPlayerCharacter/AMetaPlayerController/AMetaGameMode, GA 4종, UMeleeHitboxComponent, 락온, 스태미나·대시, 입력 에셋 19종(`create_input_assets.py`). 빌드 경고 0, 테스트 9/9 (Input.Assets 신규). 헤드리스 게임 스모크: 플레이어 스폰·어빌리티 부여·입력 에셋 로드 에러 없음. **실제 키 입력 조작감은 미검증** → S1-T08 샌드박스 PIE에서 확인 |
 | S1-T06 | 보스 프레임워크 | DONE | UGimmickComponent + 조건 4종, AMetaBossBase, UBossPatternComponent(틱 기반), UBossDataAsset/FBossPattern, UEncounterSubsystem, AEncounterTriggerBox. 빌드 경고 0, 테스트 12/12 (Gimmick.StateMachine 신규 + 선행 구현된 Gimmick.ConsoleAND, Dialogue.SwapAliases). **보스 액터·패턴·인카운터 서브시스템은 자동 테스트 없음** → S1-T08 샌드박스에서 검증 |
-| S1-T07 | 시간 배율 | TODO | |
+| S1-T07 | 시간 배율 | IN PROGRESS | ESC 토글·IMC 전환·임시 메뉴(`UMetaTempMenuWidget`)·메뉴 잠금 차단, 개발 명령 `AN_Set`/`AN_Menu`/`AN_Status`. 비전투 시 ×1.0 헤드리스 확인. 전투 중 ×0.15는 S1-T08 샌드박스에서 검증 |
 | S1-T08 | 테스트 맵 `L_Dev_Sandbox` | TODO | |
 
 ## Stage 2~6

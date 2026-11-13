@@ -1,7 +1,15 @@
 #include "Core/MetaPlayerController.h"
 #include "Characters/MetaPlayerCharacter.h"
+#include "Characters/MetaBossBase.h"
 #include "Combat/MetaGameplayAbility.h"
+#include "Core/AccessedNoneSettings.h"
 #include "Core/MetaLog.h"
+#include "Meta/EncounterSubsystem.h"
+#include "Meta/MetaSettingsSubsystem.h"
+#include "UI/MetaTempMenuWidget.h"
+#include "Blueprint/UserWidget.h"
+#include "EngineUtils.h"
+#include "Kismet/GameplayStatics.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputAction.h"
@@ -10,6 +18,7 @@
 namespace
 {
 	constexpr int32 GameplayContextPriority = 0;
+	constexpr int32 MenuContextPriority = 10;
 
 	template <typename T>
 	T* LoadInputAsset(const TCHAR* Name)
@@ -24,6 +33,11 @@ namespace
 UInputAction* AMetaPlayerController::LoadAction(const TCHAR* Name) { return LoadInputAsset<UInputAction>(Name); }
 UInputMappingContext* AMetaPlayerController::LoadContext(const TCHAR* Name) { return LoadInputAsset<UInputMappingContext>(Name); }
 
+AMetaPlayerController::AMetaPlayerController()
+{
+	MenuWidgetClass = UMetaTempMenuWidget::StaticClass();
+}
+
 AMetaPlayerCharacter* AMetaPlayerController::GetMetaCharacter() const
 {
 	return Cast<AMetaPlayerCharacter>(GetPawn());
@@ -32,12 +46,100 @@ AMetaPlayerCharacter* AMetaPlayerController::GetMetaCharacter() const
 void AMetaPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
-	if (UEnhancedInputLocalPlayerSubsystem* Input = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+	SetGameplayInputEnabled(true);
+}
+
+void AMetaPlayerController::EndPlay(const EEndPlayReason::Type Reason)
+{
+	if (IsMenuOpen())
 	{
-		if (UInputMappingContext* Gameplay = LoadContext(TEXT("IMC_Gameplay")))
-		{
-			Input->AddMappingContext(Gameplay, GameplayContextPriority);
-		}
+		ToggleMenu(); // never leave the world slowed
+	}
+	Super::EndPlay(Reason);
+}
+
+void AMetaPlayerController::SetGameplayInputEnabled(bool bEnabled)
+{
+	UEnhancedInputLocalPlayerSubsystem* Input = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
+	if (!Input)
+	{
+		return;
+	}
+	UInputMappingContext* Gameplay = LoadContext(TEXT("IMC_Gameplay"));
+	UInputMappingContext* Menu = LoadContext(TEXT("IMC_Menu"));
+	if (bEnabled)
+	{
+		if (Menu) { Input->RemoveMappingContext(Menu); }
+		if (Gameplay) { Input->AddMappingContext(Gameplay, GameplayContextPriority); }
+	}
+	else
+	{
+		if (Gameplay) { Input->RemoveMappingContext(Gameplay); }
+		if (Menu) { Input->AddMappingContext(Menu, MenuContextPriority); }
+	}
+}
+
+void AMetaPlayerController::ToggleMenu()
+{
+	if (IsMenuOpen())
+	{
+		MenuWidget->RemoveFromParent();
+		MenuWidget = nullptr;
+		UGameplayStatics::SetGlobalTimeDilation(this, 1.f);
+		SetGameplayInputEnabled(true);
+		SetInputMode(FInputModeGameOnly());
+		SetShowMouseCursor(false);
+		return;
+	}
+
+	if (GetGameInstance()->GetSubsystem<UMetaSettingsSubsystem>()->IsMenuLocked())
+	{
+		// shortcut: log only; the UI_ACCESS_DENIED toast is added with the HUD in S2-T02 / E6 in S6-T03.
+		UE_LOG(LogAccessedNone, Log, TEXT("Menu locked: Access Denied"));
+		return;
+	}
+
+	const UEncounterSubsystem* Encounters = GetWorld()->GetSubsystem<UEncounterSubsystem>();
+	const bool bInCombat = Encounters && Encounters->IsInCombatEncounter();
+	UGameplayStatics::SetGlobalTimeDilation(this, bInCombat ? UAccessedNoneSettings::Get().EncounterMenuTimeDilation : 1.f);
+
+	if (MenuWidgetClass)
+	{
+		MenuWidget = CreateWidget<UUserWidget>(this, MenuWidgetClass);
+		MenuWidget->AddToViewport(MenuContextPriority);
+	}
+	SetGameplayInputEnabled(false);
+	FInputModeGameAndUI Mode;
+	Mode.SetHideCursorDuringCapture(false);
+	SetInputMode(Mode);
+	SetShowMouseCursor(true);
+	UE_LOG(LogAccessedNone, Log, TEXT("Menu opened (combat=%d, time dilation=%.2f)"), bInCombat, UGameplayStatics::GetGlobalTimeDilation(this));
+}
+
+void AMetaPlayerController::AN_Set(const FString& Key, float Value)
+{
+	const int64 EnumValue = StaticEnum<EMetaSettingKey>()->GetValueByNameString(Key);
+	if (EnumValue == INDEX_NONE)
+	{
+		UE_LOG(LogAccessedNone, Warning, TEXT("AN_Set: unknown key '%s'"), *Key);
+		return;
+	}
+	GetGameInstance()->GetSubsystem<UMetaSettingsSubsystem>()->SetValue(static_cast<EMetaSettingKey>(EnumValue), Value);
+}
+
+void AMetaPlayerController::AN_Status()
+{
+	const UEncounterSubsystem* Encounters = GetWorld()->GetSubsystem<UEncounterSubsystem>();
+	UE_LOG(LogAccessedNone, Display, TEXT("[AN_Status] dilation=%.2f menu=%d encounter=%s"),
+		UGameplayStatics::GetGlobalTimeDilation(this), IsMenuOpen(), *Encounters->GetActiveEncounterId().ToString());
+	if (const AMetaPlayerCharacter* C = GetMetaCharacter())
+	{
+		UE_LOG(LogAccessedNone, Display, TEXT("[AN_Status] player HP=%.0f/%.0f dead=%d"), C->GetHealth(), C->GetMaxHealth(), C->IsDead());
+	}
+	for (TActorIterator<AMetaBossBase> It(GetWorld()); It; ++It)
+	{
+		UE_LOG(LogAccessedNone, Display, TEXT("[AN_Status] %s state=%s HP=%.1f/%.0f"), *It->GetName(),
+			*UEnum::GetValueAsString(It->GetGimmick()->GetState()), It->GetHealth(), It->GetMaxHealth());
 	}
 }
 
@@ -66,6 +168,7 @@ void AMetaPlayerController::SetupInputComponent()
 	Bind(TEXT("IA_LightAttack"), ETriggerEvent::Triggered, &AMetaPlayerController::OnLightAttack);
 	Bind(TEXT("IA_HeavyAttack"), ETriggerEvent::Triggered, &AMetaPlayerController::OnHeavyAttack);
 	Bind(TEXT("IA_UseItem"), ETriggerEvent::Triggered, &AMetaPlayerController::OnUseItem);
+	Bind(TEXT("IA_Menu"), ETriggerEvent::Triggered, &AMetaPlayerController::OnMenu);
 }
 
 void AMetaPlayerController::OnMove(const FInputActionValue& Value)

@@ -24,9 +24,23 @@ public:
 	static UInputAction* LoadAction(const TCHAR* Name);
 	static UInputMappingContext* LoadContext(const TCHAR* Name);
 
+	/** ESC. During a combat encounter the world slows to EncounterMenuTimeDilation (spec 2.2). */
+	UFUNCTION(BlueprintCallable, Category="Menu") void ToggleMenu();
+	UFUNCTION(BlueprintPure, Category="Menu") bool IsMenuOpen() const { return MenuWidget != nullptr; }
+
+	// --- Dev commands (spec S1 DoD allows temporary debug commands) ---
+	/** an.Set Gamma 0.95 — sets a virtual setting as if the player used the menu. */
+	UFUNCTION(Exec) void AN_Set(const FString& Key, float Value);
+	UFUNCTION(Exec) void AN_Menu() { ToggleMenu(); }
+	/** Logs time dilation, encounter and player/boss state. */
+	UFUNCTION(Exec) void AN_Status();
+
+	UPROPERTY(EditDefaultsOnly, Category="Menu") TSubclassOf<class UUserWidget> MenuWidgetClass;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
+	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 
 private:
 	class AMetaPlayerCharacter* GetMetaCharacter() const;
@@ -41,4 +55,12 @@ private:
 	void OnLightAttack();
 	void OnHeavyAttack();
 	void OnUseItem();
+	void OnMenu() { ToggleMenu(); }
+
+	void SetGameplayInputEnabled(bool bEnabled);
+
+	UPROPERTY() TObjectPtr<class UUserWidget> MenuWidget;
+
+public:
+	AMetaPlayerController();
 };
