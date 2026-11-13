@@ -16,6 +16,8 @@ struct FHeroDef
 	/** Attack hitbox; the archer's long offset is a stand-in until AMetaProjectile (S5-T04). */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) FVector AttackExtent = FVector(100.f, 100.f, 90.f);
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) FVector AttackOffset = FVector(120.f, 0.f, 0.f);
+	/** Material slots hidden on every LOD (asset sections that render broken in this engine version). */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) TArray<FName> HiddenMaterialSlots;
 };
 
 /** All tuning numbers from spec chapter 3 (and 2.2 / 6.2 / 13). Edit in Project Settings or DefaultGame.ini. */
@@ -43,6 +45,8 @@ public:
 		           Hero(TEXT("Sparrow"), 1.f, FVector(60, 60, 90), FVector(650, 0, 0)),
 		           Hero(TEXT("FengMao"), 1.f, FVector(100, 100, 90), FVector(120, 0, 0)),
 		           Hero(TEXT("Terra"), 1.f, FVector(120, 120, 90), FVector(140, 0, 0)) };
+		// Terra's axe section has corrupt skin data after the UE 5.8 mesh rebuild (stretches when animated), so hide it.
+		Heroes[3].HiddenMaterialSlots = { TEXT("M07_Justice_Weapon") };
 		Heroes[2].Mesh = FSoftObjectPath(TEXT("/Game/ParagonFengMao/Characters/Heroes/FengMao/Meshes/FengMao_GDC.FengMao_GDC"));
 	}
 

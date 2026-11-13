@@ -83,4 +83,73 @@ bool FSandboxHeroShotsTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+/**
+ * Terra (key 4) in motion, seen through the player's own follow camera: idle → run → dash → jump → idle.
+ * Same command line as HeroShots with AccessedNone.Sandbox.HeroMotion. Screenshots Motion_<step>.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSandboxHeroMotionTest, "AccessedNone.Sandbox.HeroMotion",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::ProductFilter)
+bool FSandboxHeroMotionTest::RunTest(const FString& Parameters)
+{
+	UWorld* World = nullptr;
+	for (const FWorldContext& Ctx : GEngine->GetWorldContexts())
+	{
+		if (Ctx.WorldType == EWorldType::Game && Ctx.World()) { World = Ctx.World(); }
+	}
+	AMetaPlayerCharacter* Player = World ? Cast<AMetaPlayerCharacter>(UGameplayStatics::GetPlayerPawn(World, 0)) : nullptr;
+	if (!Player)
+	{
+		AddError(TEXT("Run inside L_Dev_Sandbox with -game"));
+		return false;
+	}
+	const int32 Hero = Parameters.IsEmpty() ? 3 : FCString::Atoi(*Parameters);
+	Player->GetController()->SetControlRotation(FRotator(-10.f, 90.f, 0.f)); // run sideways so the camera sees the profile
+
+	auto Shot = [](const TCHAR* Name)
+	{
+		return new FFunctionLatentCommand([Name = FString(Name)]() { FScreenshotRequest::RequestScreenshot(TEXT("Motion_") + Name, false, false); return true; });
+	};
+	auto Run = [Player](float Seconds, bool bDash)
+	{
+		TSharedRef<double> End = MakeShared<double>(-1.0);
+		return new FFunctionLatentCommand([Player, Seconds, bDash, End]()
+		{
+			const double Now = FPlatformTime::Seconds();
+			if (*End < 0.0) { *End = Now + Seconds; Player->SetDashing(bDash); }
+			Player->Move(FVector2D(0.f, 1.f));
+			if (Now < *End) { return false; }
+			Player->SetDashing(false);
+			return true;
+		});
+	};
+
+	ADD_LATENT_AUTOMATION_COMMAND(FFunctionLatentCommand([Player, Hero, World]()
+	{
+		Player->SetHero(Hero);
+		// Reference: Paragon's own character BP for this hero, standing beside the player.
+		const FString Id = UAccessedNoneSettings::Get().Heroes[Hero].Id.ToString();
+		if (UClass* BP = LoadClass<AActor>(nullptr, *FString::Printf(TEXT("/Game/Paragon%s/Characters/Heroes/%s/%sPlayerCharacter.%sPlayerCharacter_C"), *Id, *Id, *Id, *Id)))
+		{
+			FActorSpawnParameters Params;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			World->SpawnActor<AActor>(BP, Player->GetActorLocation() + FVector(-250.f, 0.f, 0.f), FRotator(0.f, 90.f, 0.f), Params);
+		}
+		return true;
+	}));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.5f));
+	FAutomationTestFramework::Get().EnqueueLatentCommand(MakeShareable(Shot(TEXT("1_Idle"))));
+	ADD_LATENT_AUTOMATION_COMMAND(FFunctionLatentCommand([Player]() { USkeletalMeshComponent* M = Player->GetMesh(); M->bDisableClothSimulation = false; M->RecreateClothingActors(); return true; }));
+	FAutomationTestFramework::Get().EnqueueLatentCommand(MakeShareable(Run(1.0f, false)));
+	FAutomationTestFramework::Get().EnqueueLatentCommand(MakeShareable(Shot(TEXT("2_Run"))));
+	FAutomationTestFramework::Get().EnqueueLatentCommand(MakeShareable(Run(1.0f, true)));
+	FAutomationTestFramework::Get().EnqueueLatentCommand(MakeShareable(Shot(TEXT("3_Dash"))));
+	ADD_LATENT_AUTOMATION_COMMAND(FFunctionLatentCommand([Player]() { Player->TryJump(); return true; }));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(0.3f));
+	FAutomationTestFramework::Get().EnqueueLatentCommand(MakeShareable(Shot(TEXT("4_Jump"))));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(3.0f));
+	FAutomationTestFramework::Get().EnqueueLatentCommand(MakeShareable(Shot(TEXT("5_IdleAfter"))));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(0.5f));
+	return true;
+}
+
 #endif
