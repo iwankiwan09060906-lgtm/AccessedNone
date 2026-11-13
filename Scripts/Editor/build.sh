@@ -22,5 +22,5 @@ rc=$?
 grep -E "error|warning C|warning:|Result:" "$TEMP/an_build.log" | grep -v "^Log file"
 echo "warnings(project): $(grep -E 'AccessedNone.*warning' "$TEMP/an_build.log" | wc -l)"
 
-[ "$1" = "--no-launch" ] || ("$UE/Binaries/Win64/UnrealEditor.exe" "$PROJ" >/dev/null 2>&1 &)
+[ "$1" = "--no-launch" ] || [ $rc -ne 0 ] || ("$UE/Binaries/Win64/UnrealEditor.exe" "$PROJ" >/dev/null 2>&1 &)
 exit $rc

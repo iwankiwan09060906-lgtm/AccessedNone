@@ -17,4 +17,12 @@
 | 2026-11-14 | `Event.Hit.Immune` 게임플레이 이벤트는 Execution에서 송신 | 무적(3단계)이면 출력 모디파이어가 없어 AttributeSet 콜백이 호출되지 않음 |
 | 2026-11-14 | `GE_InstantKill`에 FixedDamage 미지정 시 `BossSkillDamage`(99,999) 사용 | GE가 SetByCaller를 스스로 가질 수 없음 |
 | 2026-11-14 | AttributeSet 복제 없음 | 싱글 플레이 전용 |
+| 2026-11-14 | 입력 바인딩은 `AMetaPlayerController`가 소유하고 폰에 전달 | E3 빙의(`AStatuePawn`) 후에도 조작이 그대로 유지 |
+| 2026-11-14 | 입력 에셋은 `/Game/Core/Input/`에서 이름으로 로드 (생성자 FObjectFinder 미사용) | 에셋이 생기기 전 CDO 생성 시 에러 로그 방지 |
+| 2026-11-14 | 마우스 감도·Y반전은 입력 모디파이어 대신 C++ `Look()`에서 가상 설정값 적용 | 가상 설정 변경이 즉시 반영, 에셋 수정 불필요 |
+| 2026-11-14 | 스태미나: 0보다 많으면 행동 허용, 비용만큼 차감 후 0으로 클램프 | 소울라이크 관례 |
+| 2026-11-14 | 근접 판정은 활성 창 시작·끝 2회 박스 오버랩 (중복 타격 방지) | 애니메이션 없는 전투(7.5)의 최소 구현. 빠른 대상이 빠지면 틱 스윕으로 확장 |
+| 2026-11-14 | 구르기는 `ApplyRootMotionConstantForce` (속도 1400, 0.4초), 입력 없으면 백스텝 | 애니메이션 없이 일정한 이동 거리 |
+| 2026-11-14 | 플레이어 공격 타이밍·히트박스·이동 속도를 `UAccessedNoneSettings`에 [기본값]으로 추가, 전 항목 BlueprintReadOnly | 매직 넘버 금지, Python 스크립트가 같은 값 사용 |
+| 2026-11-14 | `GameViewportClientClassName=CommonGameViewportClient` | CommonUI 입력 라우팅 필수 (미설정 시 시작 로그에 Error) |
 | 2026-11-14 | `PythonScriptPlugin`, `EditorScriptingUtilities`를 S1-T01 전에 `.uproject`에 선반영 | MCP 연결의 전제 조건 |
