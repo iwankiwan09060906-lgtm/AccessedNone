@@ -44,3 +44,4 @@
 | 2026-11-14 | 캐릭터 교체 시 `EmptyOverrideMaterials` + 천 시뮬레이션 재생성 + Paragon 인트로 몽타주(LevelStart/SelectScreen) 1초간 정지 (`AMetaCharacterBase::SuppressIntroMontages`, 보스도 적용) | Paragon ABP가 인트로 연출 중 슬롯별 머티리얼 오버라이드를 남겨, 다음 캐릭터가 이전 캐릭터의 머티리얼로 그려졌음(3·4번 머리 사라짐, 무기 늘어짐) |
 | 2026-11-14 | 시각 확인용 `AccessedNone.Sandbox.HeroShots` (렌더링 필요, `Saved/Screenshots`) | MCP 없이 스크린샷으로 캐릭터 모습 검증. Paragon 에셋의 BP 컴파일 Error 로그 때문에 종료 코드는 -1, 판정이 아니라 시각 확인용 |
 | 2026-11-14 | Terra(4번)의 도끼 머티리얼 슬롯 `M07_Justice_Weapon`을 모든 LOD에서 숨김 (`FHeroDef::HiddenMaterialSlots`) | UE 5.8이 Terra 메시를 로드 시 재빌드하면서 도끼 섹션(본 1개) 스킨 데이터가 깨져 애니메이션 중 늘어남. Paragon 원본 `TerraPlayerCharacter`도 동일. 기본 자세·도끼 숨김 시 정상 확인(HeroMotion 스크린샷). 에셋 수정은 사용자 승인 전까지 보류 |
+| 2026-11-14 | (사용자 승인) Paragon Terra 메시 에셋 수정: 깨진 LOD1·LOD2 제거(5→3 LOD), 전 LOD `UseHighPrecisionSkinWeights=true`, 저장. 도끼 숨김 우회 코드 제거 | LOD1·2의 도끼 섹션 버텍스가 본 16개에 흩어져 바인딩되어 애니메이션 중 늘어남(LOD0·3·4는 `weapon_slide` 1개로 정상). 원본 백업: `Saved/AssetBackups/Terra_original.uasset` |

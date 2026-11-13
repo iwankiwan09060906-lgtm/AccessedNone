@@ -10,7 +10,6 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
-#include "Rendering/SkeletalMeshRenderData.h"
 #include "Engine/OverlapResult.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -79,19 +78,6 @@ void AMetaPlayerCharacter::SetHero(int32 Index)
 		M->SetAnimInstanceClass(Anim);
 	}
 	M->SetRelativeScale3D(FVector(H.MeshScale));
-	for (int32 LOD = 0; LOD < M->GetNumLODs(); ++LOD)
-	{
-		M->ShowAllMaterialSections(LOD);
-		for (const FName& SlotName : H.HiddenMaterialSlots)
-		{
-			const int32 Slot = M->GetMaterialIndex(SlotName);
-			const TArray<FSkelMeshRenderSection>& Sections = M->GetSkeletalMeshAsset()->GetResourceForRendering()->LODRenderData[LOD].RenderSections;
-			for (int32 Sec = 0; Slot != INDEX_NONE && Sec < Sections.Num(); ++Sec)
-			{
-				if (Sections[Sec].MaterialIndex == Slot) { M->ShowMaterialSection(Slot, Sec, false, LOD); }
-			}
-		}
-	}
 	// Cloth keeps the previous hero's sim state after a mesh swap and explodes; rebuild it and teleport-reset.
 	M->RecreateClothingActors();
 	M->ForceClothNextUpdateTeleportAndReset();
