@@ -7,17 +7,23 @@ public class AccessedNone : ModuleRules
 	public AccessedNone(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
-	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput" });
 
-		PrivateDependencyModuleNames.AddRange(new string[] {  });
+		// Lets headers use folder-relative includes, e.g. "Core/MetaLog.h"
+		PublicIncludePaths.Add(ModuleDirectory);
 
-		// Uncomment if you are using Slate UI
-		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
-		
-		// Uncomment if you are using online features
-		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
+		PublicDependencyModuleNames.AddRange(new string[]
+		{
+			"Core", "CoreUObject", "Engine", "InputCore",
+			"GameplayAbilities", "GameplayTags", "GameplayTasks",
+			"EnhancedInput", "CommonUI", "UMG",
+			"DeveloperSettings", "AIModule", "NavigationSystem"
+		});
 
-		// To include OnlineSubsystemSteam, add it to the plugins section in your uproject file with the Enabled attribute set to true
+		PrivateDependencyModuleNames.AddRange(new string[]
+		{
+			"Slate", "SlateCore",
+			"Niagara", "LevelSequence", "MovieScene",
+			"AudioMixer", "MetasoundEngine", "SignalProcessing"
+		});
 	}
 }
