@@ -26,15 +26,22 @@ public:
 	UFUNCTION(BlueprintPure, Category="Combat") float GetMaxHealth() const;
 	UFUNCTION(BlueprintPure, Category="Combat") bool IsDead() const;
 
+	/** Paragon anim BPs play an intro montage (LevelStart / SelectScreen) on init whose weapon-summon pose looks broken without its FX. Call after (re)creating the anim instance. */
+	void SuppressIntroMontages();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void HandleDeath(const FGameplayEventData* Payload);
 
 	UFUNCTION(BlueprintImplementableEvent, Category="Combat") void OnDeath();
+	UFUNCTION() void HandleMontageStarted(UAnimMontage* Montage);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Combat") TObjectPtr<UAbilitySystemComponent> AbilitySystem;
 	UPROPERTY() TObjectPtr<UMetaCombatAttributeSet> Attributes;
 
 	/** Instant GE applied on BeginPlay to set base stats. */
 	UPROPERTY(EditDefaultsOnly, Category="Combat") TSubclassOf<UGameplayEffect> InitEffect;
+
+private:
+	double IntroMontageWindowEnd = 0.0;
 };

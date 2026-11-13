@@ -3,6 +3,8 @@
 #include "Core/MetaGameplayTags.h"
 #include "Core/MetaLog.h"
 #include "AbilitySystemComponent.h"
+#include "Animation/AnimInstance.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 AMetaCharacterBase::AMetaCharacterBase()
@@ -21,6 +23,27 @@ void AMetaCharacterBase::BeginPlay()
 		AbilitySystem->ApplyGameplayEffectToSelf(InitEffect->GetDefaultObject<UGameplayEffect>(), 1.f, AbilitySystem->MakeEffectContext());
 	}
 	AbilitySystem->GenericGameplayEventCallbacks.FindOrAdd(MetaTags::Event_Death).AddUObject(this, &AMetaCharacterBase::HandleDeath);
+	SuppressIntroMontages();
+}
+
+void AMetaCharacterBase::SuppressIntroMontages()
+{
+	// The anim BP starts its intro montage on its first update, so keep stopping montages for a short window.
+	constexpr double IntroWindowSeconds = 1.0;
+	IntroMontageWindowEnd = GetWorld()->GetTimeSeconds() + IntroWindowSeconds;
+	if (UAnimInstance* Anim = GetMesh()->GetAnimInstance())
+	{
+		Anim->StopAllMontages(0.f);
+		Anim->OnMontageStarted.AddUniqueDynamic(this, &AMetaCharacterBase::HandleMontageStarted);
+	}
+}
+
+void AMetaCharacterBase::HandleMontageStarted(UAnimMontage* Montage)
+{
+	if (GetWorld()->GetTimeSeconds() < IntroMontageWindowEnd)
+	{
+		GetMesh()->GetAnimInstance()->Montage_Stop(0.f, Montage);
+	}
 }
 
 float AMetaCharacterBase::GetHealth() const { return Attributes->GetHealth(); }

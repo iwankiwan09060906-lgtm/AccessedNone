@@ -41,3 +41,5 @@
 | 2026-11-14 | 플레이어 캐릭터를 Paragon 4종(1 Greystone / 2 Sparrow / 3 FengMao / 4 Terra)으로 교체, 숫자키 1~4로 `SetHero` (메시·ABP 교체). 정의는 `UAccessedNoneSettings::Heroes`. 스탯은 기사 그대로 | 사용자 요청. 캐릭터 선택 화면은 추후 개발 |
 | 2026-11-14 | 궁수(Sparrow)의 원거리 공격은 긴 히트박스(오프셋 650)로 임시 구현 | 투사체(`AMetaProjectile`)는 S5-T04. 그때 교체 |
 | 2026-11-14 | 테스트 보스(`ADevTestBoss`)를 Paragon Narbash 메시+ABP로 변경. 마네킹 참조 제거(에셋은 삭제하지 않음) | 사용자 요청 ("다른 에셋은 건드리지 마") |
+| 2026-11-14 | 캐릭터 교체 시 `EmptyOverrideMaterials` + 천 시뮬레이션 재생성 + Paragon 인트로 몽타주(LevelStart/SelectScreen) 1초간 정지 (`AMetaCharacterBase::SuppressIntroMontages`, 보스도 적용) | Paragon ABP가 인트로 연출 중 슬롯별 머티리얼 오버라이드를 남겨, 다음 캐릭터가 이전 캐릭터의 머티리얼로 그려졌음(3·4번 머리 사라짐, 무기 늘어짐) |
+| 2026-11-14 | 시각 확인용 `AccessedNone.Sandbox.HeroShots` (렌더링 필요, `Saved/Screenshots`) | MCP 없이 스크린샷으로 캐릭터 모습 검증. Paragon 에셋의 BP 컴파일 Error 로그 때문에 종료 코드는 -1, 판정이 아니라 시각 확인용 |

@@ -70,12 +70,18 @@ void AMetaPlayerCharacter::SetHero(int32 Index)
 	}
 	const FHeroDef& H = Heroes[Index];
 	USkeletalMeshComponent* M = GetMesh();
+	// Paragon anim BPs write per-slot material overrides (intro dissolve); drop them or the next hero renders with the previous hero's materials.
+	M->EmptyOverrideMaterials();
 	M->SetSkeletalMeshAsset(H.Mesh.LoadSynchronous());
 	if (UClass* Anim = H.AnimClass.LoadSynchronous())
 	{
 		M->SetAnimInstanceClass(Anim);
 	}
 	M->SetRelativeScale3D(FVector(H.MeshScale));
+	// Cloth keeps the previous hero's sim state after a mesh swap and explodes; rebuild it and teleport-reset.
+	M->RecreateClothingActors();
+	M->ForceClothNextUpdateTeleportAndReset();
+	SuppressIntroMontages();
 	AttackExtent = H.AttackExtent;
 	AttackOffset = H.AttackOffset;
 }
