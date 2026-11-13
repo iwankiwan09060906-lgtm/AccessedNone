@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(*Build.bat*)",
+      "Bash(*UnrealEditor-Cmd.exe*)",
+      "Bash(git *)",
+      "mcp__unreal__*"
+    ]
+  }
+}
