@@ -12,4 +12,9 @@
 | 2026-11-14 | 힌트 단계 값 = 사망 임계값 그대로 (0/1/3/5/8) | 6.3 표와 1:1 대응, 별도 enum 불필요 |
 | 2026-11-14 | 콘솔 `god`/`kill`은 인자가 있어도 `CON_DENIED` | 의도가 명확한 입력은 거부 응답이 자연스러움 |
 | 2026-11-14 | 텍스트 조회는 `MetaText::Get(Key)` → `/Game/Text/ST_Game.ST_Game` | 7.4 String Table 규칙, 에셋은 S2-T01에서 생성 |
+| 2026-11-14 | GE는 전부 C++ 파생 클래스(`UGE_*`, 베이스 `UMetaGameplayEffect`)로 구현 | 8.4 허용안. 그래프 자산 최소화, 수치는 `UAccessedNoneSettings`에서 |
+| 2026-11-14 | 메타 어트리뷰트 `IncomingRawDamage` 추가 | 반사(3.2-6)는 감쇄 전 Raw 기준인데 PostGameplayEffectExecute에서는 Raw를 알 수 없음. Execution이 Raw→Final 순서로 출력 |
+| 2026-11-14 | `Event.Hit.Immune` 게임플레이 이벤트는 Execution에서 송신 | 무적(3단계)이면 출력 모디파이어가 없어 AttributeSet 콜백이 호출되지 않음 |
+| 2026-11-14 | `GE_InstantKill`에 FixedDamage 미지정 시 `BossSkillDamage`(99,999) 사용 | GE가 SetByCaller를 스스로 가질 수 없음 |
+| 2026-11-14 | AttributeSet 복제 없음 | 싱글 플레이 전용 |
 | 2026-11-14 | `PythonScriptPlugin`, `EditorScriptingUtilities`를 S1-T01 전에 `.uproject`에 선반영 | MCP 연결의 전제 조건 |
