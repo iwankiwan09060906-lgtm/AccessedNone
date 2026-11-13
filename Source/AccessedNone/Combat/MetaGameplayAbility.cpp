@@ -85,7 +85,7 @@ void UGA_MeleeAttack::Sweep()
 
 	const UAccessedNoneSettings& S = UAccessedNoneSettings::Get();
 	const FAttackParams P = GetParams();
-	for (AActor* Target : Character->GetHitbox()->QueryHits(S.PlayerHitboxExtent, S.PlayerHitboxOffset))
+	for (AActor* Target : Character->GetHitbox()->QueryHits(Character->GetAttackExtent(), Character->GetAttackOffset()))
 	{
 		UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
 		if (!TargetASC || AlreadyHit.Contains(Target))

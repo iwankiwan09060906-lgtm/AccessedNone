@@ -12,11 +12,16 @@ ADevTestBoss::ADevTestBoss()
 	Gimmick->Conditions.Add(Gamma);
 	Gimmick->SettingsToResetOnStart.Add(EMetaSettingKey::Gamma, 0.2f);
 
-	// 7.5 placeholder: T-pose mannequin (no anim instance).
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshFinder(TEXT("/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple.SKM_Manny_Simple"));
+	// Test boss = Paragon Narbash (skeleton + anim BP; locomotion follows velocity).
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshFinder(TEXT("/Game/ParagonNarbash/Characters/Heroes/Narbash/Meshes/Narbash.Narbash"));
+	static ConstructorHelpers::FClassFinder<UAnimInstance> AnimFinder(TEXT("/Game/ParagonNarbash/Characters/Heroes/Narbash/Narbash_AnimBlueprint"));
 	if (MeshFinder.Succeeded())
 	{
 		GetMesh()->SetSkeletalMeshAsset(MeshFinder.Object);
 		GetMesh()->SetRelativeLocationAndRotation(FVector(0.f, 0.f, -90.f), FRotator(0.f, -90.f, 0.f));
+	}
+	if (AnimFinder.Succeeded())
+	{
+		GetMesh()->SetAnimInstanceClass(AnimFinder.Class);
 	}
 }

@@ -58,6 +58,7 @@ private:
 	void OnHeavyAttack();
 	void OnUseItem();
 	void OnMenu() { ToggleMenu(); }
+	template <int32 Index> void OnSelectHero();
 
 	void SetGameplayInputEnabled(bool bEnabled);
 

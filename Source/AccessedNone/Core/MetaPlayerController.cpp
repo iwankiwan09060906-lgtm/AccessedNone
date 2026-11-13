@@ -184,7 +184,16 @@ void AMetaPlayerController::SetupInputComponent()
 	Bind(TEXT("IA_HeavyAttack"), ETriggerEvent::Triggered, &AMetaPlayerController::OnHeavyAttack);
 	Bind(TEXT("IA_UseItem"), ETriggerEvent::Triggered, &AMetaPlayerController::OnUseItem);
 	Bind(TEXT("IA_Menu"), ETriggerEvent::Triggered, &AMetaPlayerController::OnMenu);
+
+	// Dev hero switch (keys 1-4): raw key bindings, no input asset needed.
+	InputComponent->BindKey(EKeys::One, IE_Pressed, this, &AMetaPlayerController::OnSelectHero<0>);
+	InputComponent->BindKey(EKeys::Two, IE_Pressed, this, &AMetaPlayerController::OnSelectHero<1>);
+	InputComponent->BindKey(EKeys::Three, IE_Pressed, this, &AMetaPlayerController::OnSelectHero<2>);
+	InputComponent->BindKey(EKeys::Four, IE_Pressed, this, &AMetaPlayerController::OnSelectHero<3>);
 }
+
+template <int32 Index>
+void AMetaPlayerController::OnSelectHero() { if (AMetaPlayerCharacter* C = GetMetaCharacter()) { C->SetHero(Index); } }
 
 void AMetaPlayerController::OnMove(const FInputActionValue& Value)
 {

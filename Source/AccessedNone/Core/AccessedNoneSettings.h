@@ -4,6 +4,20 @@
 #include "Engine/DeveloperSettings.h"
 #include "AccessedNoneSettings.generated.h"
 
+/** One selectable player hero (visual + attack reach). Stats stay the knight's (spec 3.3). */
+USTRUCT(BlueprintType)
+struct FHeroDef
+{
+	GENERATED_BODY()
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) FName Id;
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) TSoftObjectPtr<USkeletalMesh> Mesh;
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) TSoftClassPtr<UAnimInstance> AnimClass;
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) float MeshScale = 1.f;
+	/** Attack hitbox; the archer's long offset is a stand-in until AMetaProjectile (S5-T04). */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) FVector AttackExtent = FVector(100.f, 100.f, 90.f);
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) FVector AttackOffset = FVector(120.f, 0.f, 0.f);
+};
+
 /** All tuning numbers from spec chapter 3 (and 2.2 / 6.2 / 13). Edit in Project Settings or DefaultGame.ini. */
 UCLASS(Config=Game, defaultconfig, meta=(DisplayName="Accessed None Tuning"))
 class ACCESSEDNONE_API UAccessedNoneSettings : public UDeveloperSettings
@@ -11,7 +25,30 @@ class ACCESSEDNONE_API UAccessedNoneSettings : public UDeveloperSettings
 	GENERATED_BODY()
 
 public:
+	UAccessedNoneSettings()
+	{
+		auto Hero = [](const TCHAR* Name, float Scale, FVector Extent, FVector Offset)
+		{
+			FHeroDef H;
+			H.Id = Name;
+			H.Mesh = FSoftObjectPath(FString::Printf(TEXT("/Game/Paragon%s/Characters/Heroes/%s/Meshes/%s.%s"), Name, Name, Name, Name));
+			H.AnimClass = FSoftObjectPath(FString::Printf(TEXT("/Game/Paragon%s/Characters/Heroes/%s/%s_AnimBlueprint.%s_AnimBlueprint_C"), Name, Name, Name, Name));
+			H.MeshScale = Scale;
+			H.AttackExtent = Extent;
+			H.AttackOffset = Offset;
+			return H;
+		};
+		// Keys 1-4: warrior, archer (ranged), guard, statue. FengMao's mesh asset is named FengMao_GDC.
+		Heroes = { Hero(TEXT("Greystone"), 1.f, FVector(100, 100, 90), FVector(120, 0, 0)),
+		           Hero(TEXT("Sparrow"), 1.f, FVector(60, 60, 90), FVector(650, 0, 0)),
+		           Hero(TEXT("FengMao"), 1.f, FVector(100, 100, 90), FVector(120, 0, 0)),
+		           Hero(TEXT("Terra"), 1.f, FVector(120, 120, 90), FVector(140, 0, 0)) };
+		Heroes[2].Mesh = FSoftObjectPath(TEXT("/Game/ParagonFengMao/Characters/Heroes/FengMao/Meshes/FengMao_GDC.FengMao_GDC"));
+	}
+
 	static const UAccessedNoneSettings& Get() { return *GetDefault<UAccessedNoneSettings>(); }
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Heroes") TArray<FHeroDef> Heroes;
 
 	// --- 3.1 Combat formula ---
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Combat") float BossHPMultiplier = 10.f;

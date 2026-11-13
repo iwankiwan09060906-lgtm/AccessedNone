@@ -43,18 +43,7 @@ AMetaPlayerCharacter::AMetaPlayerCharacter()
 	Hitbox = CreateDefaultSubobject<UMeleeHitboxComponent>(TEXT("Hitbox"));
 	Hitbox->SetupAttachment(RootComponent);
 
-	// 7.5 placeholder: third-person template mannequin.
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshFinder(TEXT("/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple.SKM_Manny_Simple"));
-	static ConstructorHelpers::FClassFinder<UAnimInstance> AnimFinder(TEXT("/Game/Characters/Mannequins/Anims/Unarmed/ABP_Unarmed"));
-	if (MeshFinder.Succeeded())
-	{
-		GetMesh()->SetSkeletalMeshAsset(MeshFinder.Object);
-		GetMesh()->SetRelativeLocationAndRotation(FVector(0.f, 0.f, -96.f), FRotator(0.f, -90.f, 0.f));
-	}
-	if (AnimFinder.Succeeded())
-	{
-		GetMesh()->SetAnimInstanceClass(AnimFinder.Class);
-	}
+	GetMesh()->SetRelativeLocationAndRotation(FVector(0.f, 0.f, -97.f), FRotator(0.f, -90.f, 0.f));
 	// E5 letterbox silhouette (spec 8.9).
 	GetMesh()->SetRenderCustomDepth(true);
 	GetMesh()->SetCustomDepthStencilValue(1);
@@ -69,6 +58,26 @@ void AMetaPlayerCharacter::BeginPlay()
 	}
 	RefillHealFlasks();
 	UpdateMoveSpeed();
+	SetHero(0);
+}
+
+void AMetaPlayerCharacter::SetHero(int32 Index)
+{
+	const TArray<FHeroDef>& Heroes = UAccessedNoneSettings::Get().Heroes;
+	if (!Heroes.IsValidIndex(Index))
+	{
+		return;
+	}
+	const FHeroDef& H = Heroes[Index];
+	USkeletalMeshComponent* M = GetMesh();
+	M->SetSkeletalMeshAsset(H.Mesh.LoadSynchronous());
+	if (UClass* Anim = H.AnimClass.LoadSynchronous())
+	{
+		M->SetAnimInstanceClass(Anim);
+	}
+	M->SetRelativeScale3D(FVector(H.MeshScale));
+	AttackExtent = H.AttackExtent;
+	AttackOffset = H.AttackOffset;
 }
 
 void AMetaPlayerCharacter::Tick(float DeltaSeconds)
