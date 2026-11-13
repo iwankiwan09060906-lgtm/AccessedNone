@@ -162,15 +162,25 @@ void UBossPatternComponent::ApplyHits()
 
 void UBossPatternComponent::MoveTowardTarget()
 {
-	if (const APawn* Pawn = Cast<APawn>(GetOwner()))
+	APawn* Pawn = Cast<APawn>(GetOwner());
+	if (!Pawn)
 	{
-		if (AAIController* AI = Cast<AAIController>(Pawn->GetController()))
-		{
-			if (AI->GetMoveStatus() != EPathFollowingStatus::Moving)
-			{
-				AI->MoveToActor(Target.Get(), ApproachAcceptance);
-			}
-		}
+		return;
+	}
+	AAIController* AI = Cast<AAIController>(Pawn->GetController());
+	if (AI && AI->GetMoveStatus() == EPathFollowingStatus::Moving)
+	{
+		return;
+	}
+	if (AI && AI->MoveToActor(Target.Get(), ApproachAcceptance) != EPathFollowingRequestResult::Failed)
+	{
+		return;
+	}
+	// No navmesh: slide straight at the target (fits the T-pose defense entities).
+	const FVector To = Target->GetActorLocation() - Pawn->GetActorLocation();
+	if (To.Size2D() > ApproachAcceptance)
+	{
+		Pawn->AddMovementInput(To.GetSafeNormal2D());
 	}
 }
 

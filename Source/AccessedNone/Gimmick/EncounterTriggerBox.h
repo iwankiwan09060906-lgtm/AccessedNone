@@ -16,6 +16,9 @@ public:
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category="Encounter") FName EncounterId;
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category="Encounter") TArray<TObjectPtr<AMetaBossBase>> Bosses;
 
+	/** Starts the encounter for all listed bosses (what entering the volume does). */
+	UFUNCTION(BlueprintCallable, Category="Encounter") void StartEncounter();
+
 protected:
 	virtual void BeginPlay() override;
 

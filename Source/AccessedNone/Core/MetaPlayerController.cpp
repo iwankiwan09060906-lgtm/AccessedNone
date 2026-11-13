@@ -1,11 +1,15 @@
 #include "Core/MetaPlayerController.h"
 #include "Characters/MetaPlayerCharacter.h"
 #include "Characters/MetaBossBase.h"
+#include "Characters/BossDataAsset.h"
 #include "Combat/MetaGameplayAbility.h"
 #include "Core/AccessedNoneSettings.h"
 #include "Core/MetaLog.h"
 #include "Meta/EncounterSubsystem.h"
 #include "Meta/MetaSettingsSubsystem.h"
+#include "Gimmick/EncounterTriggerBox.h"
+#include "Combat/MetaCombatAttributeSet.h"
+#include "AbilitySystemComponent.h"
 #include "UI/MetaTempMenuWidget.h"
 #include "Blueprint/UserWidget.h"
 #include "EngineUtils.h"
@@ -127,6 +131,14 @@ void AMetaPlayerController::AN_Set(const FString& Key, float Value)
 	GetGameInstance()->GetSubsystem<UMetaSettingsSubsystem>()->SetValue(static_cast<EMetaSettingKey>(EnumValue), Value);
 }
 
+void AMetaPlayerController::AN_Encounter()
+{
+	for (TActorIterator<AEncounterTriggerBox> It(GetWorld()); It; ++It)
+	{
+		It->StartEncounter();
+	}
+}
+
 void AMetaPlayerController::AN_Status()
 {
 	const UEncounterSubsystem* Encounters = GetWorld()->GetSubsystem<UEncounterSubsystem>();
@@ -138,8 +150,11 @@ void AMetaPlayerController::AN_Status()
 	}
 	for (TActorIterator<AMetaBossBase> It(GetWorld()); It; ++It)
 	{
-		UE_LOG(LogAccessedNone, Display, TEXT("[AN_Status] %s state=%s HP=%.1f/%.0f"), *It->GetName(),
-			*UEnum::GetValueAsString(It->GetGimmick()->GetState()), It->GetHealth(), It->GetMaxHealth());
+		FGameplayTagContainer OwnedTags;
+		It->GetAbilitySystemComponent()->GetOwnedGameplayTags(OwnedTags);
+		UE_LOG(LogAccessedNone, Display, TEXT("[AN_Status] %s state=%s HP=%.1f/%.0f DR=%.2f tags=%s effects=%d data=%s"), *It->GetName(),
+			*UEnum::GetValueAsString(It->GetGimmick()->GetState()), It->GetHealth(), It->GetMaxHealth(),
+			It->GetAttributes()->GetDamageReduction(), *OwnedTags.ToStringSimple(), It->GetAbilitySystemComponent()->GetActiveEffects(FGameplayEffectQuery()).Num(), *GetNameSafe(It->GetBossData()));
 	}
 }
 

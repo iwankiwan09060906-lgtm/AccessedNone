@@ -33,4 +33,8 @@
 | 2026-11-14 | `UBossDataAsset.HintAsset`은 S3-T03에서 `UHintDataAsset`과 함께 추가 | 아직 사용처 없음 |
 | 2026-11-14 | DialogueSwap·UIDragDrop 조건은 판정 로직만 구현, 위젯/대화 시스템이 `EvaluateNames`/`SetFraction` 호출 | 해당 UI는 S2-T05, S4-T01에서 생성 |
 | 2026-11-14 | 보스 패턴은 보스끼리 피해를 주지 않음 (히트 대상 = 인카운터 대상 플레이어만) | E4/E5 다수 보스 |
+| 2026-11-14 | 테스트 보스 조건은 C++ `ADevTestBoss` 생성자에서 설정, 데이터는 `BP_TestBoss`/`DA_Boss_Test` | Instanced 조건 객체를 Python으로 BP CDO에 넣는 것은 불안정 |
+| 2026-11-14 | 내비메시가 없으면 보스는 대상에게 직선 이동 (`AddMovementInput`) | 샌드박스에 NavMeshBounds를 Python으로 만들 수 없음(브러시 미생성). T-포즈 슬라이딩 콘셉트와 일치 |
+| 2026-11-14 | Stage DoD의 PIE 흐름은 `-game` + 지연 자동화 테스트(`Sandbox.BossFlow`, ClientContext)로 검증 | MCP는 빌드마다 재연결 필요. 게임 프로세스 안에서 실시간 대기하며 반복 실행 가능 |
+| 2026-11-14 | 개발 명령 `AN_Set/AN_Menu/AN_Status/AN_Encounter` (PlayerController Exec) | S1 DoD "임시 디버그 명령 허용" |
 | 2026-11-14 | `PythonScriptPlugin`, `EditorScriptingUtilities`를 S1-T01 전에 `.uproject`에 선반영 | MCP 연결의 전제 조건 |

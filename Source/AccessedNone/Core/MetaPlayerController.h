@@ -34,6 +34,8 @@ public:
 	UFUNCTION(Exec) void AN_Menu() { ToggleMenu(); }
 	/** Logs time dilation, encounter and player/boss state. */
 	UFUNCTION(Exec) void AN_Status();
+	/** Starts every encounter trigger in the level as if the player walked in. */
+	UFUNCTION(Exec) void AN_Encounter();
 
 	UPROPERTY(EditDefaultsOnly, Category="Menu") TSubclassOf<class UUserWidget> MenuWidgetClass;
 

@@ -11,10 +11,14 @@ void AEncounterTriggerBox::BeginPlay()
 
 void AEncounterTriggerBox::HandleOverlap(AActor* /*OverlappedActor*/, AActor* OtherActor)
 {
-	if (!Cast<AMetaPlayerCharacter>(OtherActor))
+	if (Cast<AMetaPlayerCharacter>(OtherActor))
 	{
-		return;
+		StartEncounter();
 	}
+}
+
+void AEncounterTriggerBox::StartEncounter()
+{
 	UEncounterSubsystem* Encounters = GetWorld()->GetSubsystem<UEncounterSubsystem>();
 	for (AMetaBossBase* Boss : Bosses)
 	{
