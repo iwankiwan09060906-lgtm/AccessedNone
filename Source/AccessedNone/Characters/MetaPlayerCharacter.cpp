@@ -5,6 +5,7 @@
 #include "Combat/MeleeHitboxComponent.h"
 #include "Core/AccessedNoneSettings.h"
 #include "Meta/MetaSettingsSubsystem.h"
+#include "Meta/EncounterSubsystem.h"
 #include "AbilitySystemComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -283,4 +284,8 @@ void AMetaPlayerCharacter::HandleDeath(const FGameplayEventData* Payload)
 	ClearLockOn();
 	SetDashing(false);
 	Super::HandleDeath(Payload);
+	if (UEncounterSubsystem* Encounters = GetWorld()->GetSubsystem<UEncounterSubsystem>())
+	{
+		Encounters->NotifyPlayerDied();
+	}
 }

@@ -25,4 +25,12 @@
 | 2026-11-14 | 구르기는 `ApplyRootMotionConstantForce` (속도 1400, 0.4초), 입력 없으면 백스텝 | 애니메이션 없이 일정한 이동 거리 |
 | 2026-11-14 | 플레이어 공격 타이밍·히트박스·이동 속도를 `UAccessedNoneSettings`에 [기본값]으로 추가, 전 항목 BlueprintReadOnly | 매직 넘버 금지, Python 스크립트가 같은 값 사용 |
 | 2026-11-14 | `GameViewportClientClassName=CommonGameViewportClient` | CommonUI 입력 라우팅 필수 (미설정 시 시작 로그에 Error) |
+| 2026-11-14 | `UBossPatternComponent`는 타이머 대신 컴포넌트 틱 상태 머신 | 액터 `CustomTimeDilation`(E6 slomo)이 윈드업·쿨다운·이동에 함께 적용됨. 월드 타이머는 액터 배율을 무시 |
+| 2026-11-14 | Breaking 중 피격 무효는 루즈 태그 `State.Breaking` + Execution에서 IMMUNE 이벤트 없이 0 처리 | 3.5 "Breaking 동안 피격되지 않음"; IMMUNE 텍스트는 무적 상태 전용 |
+| 2026-11-14 | `SYS_SETTING_OVERRIDE`의 `{Boss}`는 보스 액터 클래스명 (`BP_Assassin_C` 등) | 5.0 예시와 동일하게 BP 생성 클래스명이 그대로 나옴 |
+| 2026-11-14 | 인카운터는 동시에 1개, 보스 여러 체 가능, 전원 Defeated 시 종료 | E4 쌍둥이·E5 군단 5체 대응 |
+| 2026-11-14 | `UBossDataAsset.HPMultiplierOverride` 추가 | 페이즈 1 가짜 보스 HP `D×15` (3.4) |
+| 2026-11-14 | `UBossDataAsset.HintAsset`은 S3-T03에서 `UHintDataAsset`과 함께 추가 | 아직 사용처 없음 |
+| 2026-11-14 | DialogueSwap·UIDragDrop 조건은 판정 로직만 구현, 위젯/대화 시스템이 `EvaluateNames`/`SetFraction` 호출 | 해당 UI는 S2-T05, S4-T01에서 생성 |
+| 2026-11-14 | 보스 패턴은 보스끼리 피해를 주지 않음 (히트 대상 = 인카운터 대상 플레이어만) | E4/E5 다수 보스 |
 | 2026-11-14 | `PythonScriptPlugin`, `EditorScriptingUtilities`를 S1-T01 전에 `.uproject`에 선반영 | MCP 연결의 전제 조건 |

@@ -67,6 +67,12 @@ void UMetaDamageExecution::Execute_Implementation(const FGameplayEffectCustomExe
 		return;
 	}
 
+	// Breaking transition (spec 3.5): untouchable, no IMMUNE text.
+	if (TargetASC->HasMatchingGameplayTag(MetaTags::State_Breaking))
+	{
+		return;
+	}
+
 	// 3) invulnerable
 	if (TargetASC->HasMatchingGameplayTag(MetaTags::State_Invulnerable))
 	{
