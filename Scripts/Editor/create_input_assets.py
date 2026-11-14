@@ -78,8 +78,9 @@ def gameplay(o):
         mapping(o, ia["IA_Dodge"], "SpaceBar", triggers=[pressed(o)]),
         mapping(o, ia["IA_Jump"], "F", triggers=[pressed(o)]),
         mapping(o, ia["IA_LockOn"], "MiddleMouseButton", triggers=[pressed(o)]),
-        # User revision: one LMB action; on release a press held >= HeavyChargeSeconds is a full-charge heavy attack.
-        mapping(o, ia["IA_LightAttack"], "LeftMouseButton"),
+        mapping(o, ia["IA_ModifierShift"], "LeftShift", triggers=[new(unreal.InputTriggerDown, o)]),
+        mapping(o, ia["IA_LightAttack"], "LeftMouseButton", triggers=[pressed(o), new(unreal.InputTriggerChordBlocker, o, chord_action=ia["IA_ModifierShift"])]),
+        mapping(o, ia["IA_HeavyAttack"], "LeftMouseButton", triggers=[pressed(o), new(unreal.InputTriggerChordAction, o, chord_action=ia["IA_ModifierShift"])]),
         mapping(o, ia["IA_UseItem"], "R", triggers=[pressed(o)]),
         mapping(o, ia["IA_Interact"], "E", triggers=[pressed(o)]),
         mapping(o, ia["IA_Menu"], "Escape", triggers=[pressed(o)]),

@@ -1,4 +1,5 @@
 #include "Misc/AutomationTest.h"
+#include "Core/AccessedNoneSettings.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "AbilitySystemComponent.h"
@@ -183,8 +184,10 @@ bool FCombatHitsToKillTest::RunTest(const FString& Parameters)
 		return Hits;
 	};
 
-	TestEqual(TEXT("light attacks to kill vulnerable boss"), HitsToKill(1.f), 10);
-	TestEqual(TEXT("heavy attacks to kill vulnerable boss"), HitsToKill(1.5f), 7);
+	const UAccessedNoneSettings& S = UAccessedNoneSettings::Get();
+	TestEqual(TEXT("light attacks to kill vulnerable boss"), HitsToKill(S.LightMotionValue), 10);
+	// User revision: heavy = 2x light (spec 3.1 had 1.5x / 7 hits).
+	TestEqual(TEXT("heavy attacks to kill vulnerable boss"), HitsToKill(S.HeavyMotionValue), 5);
 	return true;
 }
 

@@ -1,4 +1,6 @@
 #include "Misc/AutomationTest.h"
+#include "Animation/AnimInstance.h"
+#include "Core/MetaGameplayTags.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -268,15 +270,107 @@ bool FSandboxPracticeTest::RunTest(const FString& Parameters)
 		{
 			ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([S, Hero, bHeavy]()
 			{
+				// Melee range, facing the dummy, camera from the side-back so the contact spark is visible.
+				const FVector Stand = S->BossSpawn + S->Boss->GetActorForwardVector() * 190.f;
+				S->Player->SetActorLocation(FVector(Stand.X, Stand.Y, S->Player->GetActorLocation().Z), false, nullptr, ETeleportType::TeleportPhysics);
+				S->Player->SetActorRotation((S->BossSpawn - Stand).GetSafeNormal2D().Rotation());
+				S->PC->SetControlRotation((S->BossSpawn - Stand).GetSafeNormal2D().Rotation() + FRotator(-10.f, 35.f, 0.f));
 				S->Player->SetHero(Hero);
 				S->Player->ActivateAbility(bHeavy ? UGA_HeavyAttack::StaticClass() : UGA_LightAttack::StaticClass());
 			}, 1.2f));
 			ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([Hero, bHeavy]()
 			{
 				FScreenshotRequest::RequestScreenshot(FString::Printf(TEXT("Motion_Hero%d_%s"), Hero + 1, bHeavy ? TEXT("Heavy") : TEXT("Light")), true, false);
-			}, bHeavy ? 0.55f : 0.3f));
+			}, bHeavy ? UAccessedNoneSettings::Get().HeavyWindup + 0.08f : UAccessedNoneSettings::Get().LightWindup + 0.08f)); // just after impact
 		}
 	}
+	// Enemy hit on the player → flinch.
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([S]()
+	{
+		S->Player->SetHero(0);
+		UAbilitySystemComponent* Src = S->Boss->GetAbilitySystemComponent();
+		FGameplayEffectSpecHandle Spec = Src->MakeOutgoingSpec(UGE_Damage::StaticClass(), 1.f, Src->MakeEffectContext());
+		Spec.Data->SetSetByCallerMagnitude(MetaTags::Data_FixedDamage, 100.f);
+		Src->ApplyGameplayEffectSpecToTarget(*Spec.Data, S->Player->GetAbilitySystemComponent());
+	}, 1.5f));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([]()
+	{
+		FScreenshotRequest::RequestScreenshot(TEXT("Motion_Flinch"), true, false);
+	}, 0.25f));
+	return true;
+}
+
+#endif
+
+#if WITH_DEV_AUTOMATION_TESTS
+
+/**
+ * Roll rules (user revision): no input = forward roll, stamina cost, blocked at 0 stamina, 1 s cooldown, i-frames;
+ * enemy hits make the player flinch.
+ *   UnrealEditor-Cmd AccessedNone.uproject /Game/Maps/L_Dev_Sandbox -game -nullrhi -ExecCmds="Automation RunTests AccessedNone.Sandbox.Roll; Quit"
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSandboxRollTest, "AccessedNone.Sandbox.Roll", EAutomationTestFlags::ClientContext | EAutomationTestFlags::ProductFilter)
+bool FSandboxRollTest::RunTest(const FString& Parameters)
+{
+	struct FState { TWeakObjectPtr<AMetaPlayerCharacter> Player; TWeakObjectPtr<AMetaBossBase> Boss; FVector Start; FVector Forward; float Stamina = 0.f; };
+	TSharedRef<FState> S = MakeShared<FState>();
+	UWorld* World = nullptr;
+	for (const FWorldContext& Ctx : GEngine->GetWorldContexts())
+	{
+		if (Ctx.WorldType == EWorldType::Game && Ctx.World()) { World = Ctx.World(); }
+	}
+	if (!World || !World->GetMapName().Contains(TEXT("L_Dev_Sandbox")))
+	{
+		AddError(TEXT("Run this inside L_Dev_Sandbox with -game"));
+		return false;
+	}
+	S->Player = Cast<AMetaPlayerCharacter>(UGameplayStatics::GetPlayerPawn(World, 0));
+	TActorIterator<AMetaBossBase> BossIt(World);
+	S->Boss = BossIt ? *BossIt : nullptr;
+	if (!S->Player.IsValid() || !S->Boss.IsValid())
+	{
+		AddError(TEXT("Sandbox needs the player and the dummy"));
+		return false;
+	}
+	const UAccessedNoneSettings& T = UAccessedNoneSettings::Get();
+	auto Stamina = [S]() { return S->Player->GetAttributes()->GetStamina(); };
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, S, Stamina]()
+	{
+		S->Start = S->Player->GetActorLocation();
+		S->Forward = S->Player->GetActorForwardVector().GetSafeNormal2D();
+		S->Stamina = Stamina();
+		TestTrue(TEXT("roll starts"), S->Player->ActivateAbility(UGA_Dodge::StaticClass()));
+		TestTrue(TEXT("i-frames active during the roll"), S->Player->GetAbilitySystemComponent()->HasMatchingGameplayTag(MetaTags::State_IFrame));
+		TestNearlyEqual(TEXT("roll costs stamina"), Stamina(), S->Stamina - UAccessedNoneSettings::Get().StaminaCostDodge, 1.f);
+	}, 1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, S]()
+	{
+		// Still inside the 1 s cooldown.
+		S->Player->ActivateAbility(UGA_Dodge::StaticClass());
+		TestFalse(TEXT("no back-to-back roll"), S->Player->GetAbilitySystemComponent()->HasMatchingGameplayTag(MetaTags::State_IFrame));
+	}, T.DodgeDuration + 0.05f));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, S]()
+	{
+		const FVector Moved = S->Player->GetActorLocation() - S->Start;
+		TestTrue(TEXT("no input = forward roll"), FVector::DotProduct(Moved, S->Forward) > 300.f);
+		// Out of stamina: blocked even after the cooldown.
+		S->Player->GetAbilitySystemComponent()->SetNumericAttributeBase(UMetaCombatAttributeSet::GetStaminaAttribute(), 0.f);
+		S->Start = S->Player->GetActorLocation();
+		S->Player->ActivateAbility(UGA_Dodge::StaticClass());
+		TestFalse(TEXT("no roll at 0 stamina"), S->Player->GetAbilitySystemComponent()->HasMatchingGameplayTag(MetaTags::State_IFrame));
+	}, 0.6f));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, S]()
+	{
+		// An enemy hit lands → flinch.
+		S->Player->GetAbilitySystemComponent()->SetNumericAttributeBase(UMetaCombatAttributeSet::GetHealthAttribute(), S->Player->GetMaxHealth());
+		UAbilitySystemComponent* Src = S->Boss->GetAbilitySystemComponent();
+		FGameplayEffectSpecHandle Spec = Src->MakeOutgoingSpec(UGE_Damage::StaticClass(), 1.f, Src->MakeEffectContext());
+		Spec.Data->SetSetByCallerMagnitude(MetaTags::Data_FixedDamage, 100.f);
+		Src->ApplyGameplayEffectSpecToTarget(*Spec.Data, S->Player->GetAbilitySystemComponent());
+		const UAnimInstance* Anim = S->Player->GetMesh()->GetAnimInstance();
+		TestTrue(TEXT("player flinches when hit"), Anim && Anim->IsAnyMontagePlaying());
+	}, 0.3f));
 	return true;
 }
 

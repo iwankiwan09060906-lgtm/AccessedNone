@@ -229,7 +229,8 @@ void AMetaPlayerController::SetupInputComponent()
 	Bind(TEXT("IA_Dodge"), ETriggerEvent::Triggered, &AMetaPlayerController::OnDodge);
 	Bind(TEXT("IA_Jump"), ETriggerEvent::Triggered, &AMetaPlayerController::OnJump);
 	Bind(TEXT("IA_LockOn"), ETriggerEvent::Triggered, &AMetaPlayerController::OnLockOn);
-	if (UInputAction* IA = LoadAction(TEXT("IA_LightAttack"))) { EIC->BindAction(IA, ETriggerEvent::Completed, this, &AMetaPlayerController::OnAttackReleased); }
+	Bind(TEXT("IA_LightAttack"), ETriggerEvent::Triggered, &AMetaPlayerController::OnLightAttack);
+	Bind(TEXT("IA_HeavyAttack"), ETriggerEvent::Triggered, &AMetaPlayerController::OnHeavyAttack);
 	Bind(TEXT("IA_UseItem"), ETriggerEvent::Triggered, &AMetaPlayerController::OnUseItem);
 	Bind(TEXT("IA_Menu"), ETriggerEvent::Triggered, &AMetaPlayerController::OnMenu);
 
@@ -256,12 +257,6 @@ void AMetaPlayerController::OnLook(const FInputActionValue& Value)
 void AMetaPlayerController::OnDodge()       { if (AMetaPlayerCharacter* C = GetMetaCharacter()) { C->ActivateAbility(UGA_Dodge::StaticClass()); } }
 void AMetaPlayerController::OnJump()        { if (AMetaPlayerCharacter* C = GetMetaCharacter()) { C->TryJump(); } }
 void AMetaPlayerController::OnLockOn()      { if (AMetaPlayerCharacter* C = GetMetaCharacter()) { C->ToggleLockOn(); } }
-void AMetaPlayerController::OnAttackReleased(const FInputActionInstance& Instance)
-{
-	if (AMetaPlayerCharacter* C = GetMetaCharacter())
-	{
-		const bool bCharged = Instance.GetElapsedTime() >= UAccessedNoneSettings::Get().HeavyChargeSeconds;
-		C->ActivateAbility(bCharged ? UGA_HeavyAttack::StaticClass() : UGA_LightAttack::StaticClass());
-	}
-}
+void AMetaPlayerController::OnLightAttack() { if (AMetaPlayerCharacter* C = GetMetaCharacter()) { C->ActivateAbility(UGA_LightAttack::StaticClass()); } }
+void AMetaPlayerController::OnHeavyAttack() { if (AMetaPlayerCharacter* C = GetMetaCharacter()) { C->ActivateAbility(UGA_HeavyAttack::StaticClass()); } }
 void AMetaPlayerController::OnUseItem()     { if (AMetaPlayerCharacter* C = GetMetaCharacter()) { C->ActivateAbility(UGA_Heal::StaticClass()); } }

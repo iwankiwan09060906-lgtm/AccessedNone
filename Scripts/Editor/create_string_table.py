@@ -21,7 +21,7 @@ ENTRIES = [
     ("OP_P1_TUT_MOVE", "WASD로 이동합니다."),
     ("OP_P1_TUT_DODGE", "Space를 눌러 구르면 공격을 피할 수 있습니다."),
     ("OP_P1_TUT_LIGHT", "마우스 왼쪽 버튼으로 공격합니다."),
-    ("OP_P1_TUT_HEAVY", "마우스 왼쪽 버튼을 길게 눌렀다 떼면 강공격이 나갑니다."),
+    ("OP_P1_TUT_HEAVY", "Shift를 누른 채 공격하면 강공격이 나갑니다."),
     ("OP_P1_TUT_HEAL", "R을 눌러 회복약을 사용합니다."),
     ("OP_P1_BOSS_NAME", "잿빛 왕관의 대주교, 엘베른"),
     ("OP_P3_LOG_01", "[SYSTEM] LogTemp: Warning: Unregistered Anomaly Actor detected in World 'Ending_Final'"),

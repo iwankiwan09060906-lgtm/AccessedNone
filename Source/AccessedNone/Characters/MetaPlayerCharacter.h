@@ -42,6 +42,9 @@ public:
 	/** While a ranged attack runs the body turns to the aim point, then back to facing the movement direction. */
 	void SetAttackFacing(bool bFacing);
 
+	bool IsDodgeOnCooldown() const;
+	void MarkDodgeUsed() { LastDodgeTime = GetWorld()->GetTimeSeconds(); }
+
 	/** Somersault the mesh along WorldDir over Seconds (the roll has no animation asset). */
 	void StartRollVisual(const FVector& WorldDir, float Seconds);
 
@@ -60,6 +63,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void HandleDeath(const FGameplayEventData* Payload) override;
+	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 
 	UPROPERTY(VisibleAnywhere, Category="Camera") TObjectPtr<USpringArmComponent> CameraBoom;
 	UPROPERTY(VisibleAnywhere, Category="Camera") TObjectPtr<UCameraComponent> FollowCamera;
@@ -93,5 +97,8 @@ private:
 	double LastLightAttackTime = -1000.0;
 	bool bDashing = false;
 	bool bAttackFacing = false;
+	double LastDodgeTime = -1000.0;
+	FDelegateHandle DamageHandle;
+	void HandleAnyDamage(AActor* Target, float Damage, bool bImmune);
 	bool bHealing = false;
 };

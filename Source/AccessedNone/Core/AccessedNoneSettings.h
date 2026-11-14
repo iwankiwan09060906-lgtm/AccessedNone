@@ -28,6 +28,8 @@ struct FHeroDef
 	/** Light attack combo, cycled per swing (montages or sequences; sequences play in the montages' slot). */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) TArray<TSoftObjectPtr<UAnimSequenceBase>> LightAttackAnims;
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) TSoftObjectPtr<UAnimSequenceBase> HeavyAttackAnim;
+	/** Short flinch when an enemy hit lands on the player. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) TSoftObjectPtr<UAnimSequenceBase> HitReactAnim;
 };
 
 /** All tuning numbers from spec chapter 3 (and 2.2 / 6.2 / 13). Edit in Project Settings or DefaultGame.ini. */
@@ -68,16 +70,17 @@ public:
 		}
 		Heroes[2].Mesh = FSoftObjectPath(TEXT("/Game/ParagonFengMao/Characters/Heroes/FengMao/Meshes/FengMao_GDC.FengMao_GDC"));
 		// Attack motions (Paragon packs): primary combo montages + a slow/ability sequence as the heavy attack.
-		auto Anims = [](FHeroDef& H, std::initializer_list<const TCHAR*> Light, const TCHAR* Heavy)
+		auto Anims = [](FHeroDef& H, std::initializer_list<const TCHAR*> Light, const TCHAR* Heavy, const TCHAR* HitReact)
 		{
 			const FString Dir = FString::Printf(TEXT("/Game/Paragon%s/Characters/Heroes/%s/Animations/"), *H.Id.ToString(), *H.Id.ToString());
 			for (const TCHAR* L : Light) { H.LightAttackAnims.Add(TSoftObjectPtr<UAnimSequenceBase>(FSoftObjectPath(Dir + L + TEXT(".") + L))); }
 			H.HeavyAttackAnim = FSoftObjectPath(Dir + Heavy + TEXT(".") + Heavy);
+			H.HitReactAnim = FSoftObjectPath(Dir + HitReact + TEXT(".") + HitReact);
 		};
-		Anims(Heroes[0], { TEXT("Attack_PrimaryA_Montage"), TEXT("Attack_PrimaryB_Montage"), TEXT("Attack_PrimaryC_Montage") }, TEXT("Ability_R"));
-		Anims(Heroes[1], { TEXT("Primary_Fire_Med_Montage") }, TEXT("RMB_Fire"));
-		Anims(Heroes[2], { TEXT("Melee_A_Med_Montage"), TEXT("Melee_B_Fast_Montage"), TEXT("Melee_C_Med_Montage") }, TEXT("SlowAbility"));
-		Anims(Heroes[3], { TEXT("Primary_Melee_A_slow_Montage"), TEXT("Primary_Melee_B_slow_Montage"), TEXT("Primary_Melee_C_slow_Montage") }, TEXT("Q_swing_B"));
+		Anims(Heroes[0], { TEXT("Attack_PrimaryA_Montage"), TEXT("Attack_PrimaryB_Montage"), TEXT("Attack_PrimaryC_Montage") }, TEXT("Ability_R"), TEXT("HitReact_Front"));
+		Anims(Heroes[1], { TEXT("Primary_Fire_Med_Montage") }, TEXT("RMB_Fire"), TEXT("HitReact_Fwd"));
+		Anims(Heroes[2], { TEXT("Melee_A_Med_Montage"), TEXT("Melee_B_Fast_Montage"), TEXT("Melee_C_Med_Montage") }, TEXT("SlowAbility"), TEXT("HitReact_Fwd"));
+		Anims(Heroes[3], { TEXT("Primary_Melee_A_slow_Montage"), TEXT("Primary_Melee_B_slow_Montage"), TEXT("Primary_Melee_C_slow_Montage") }, TEXT("Q_swing_B"), TEXT("HitReact_Front"));
 	}
 
 	static const UAccessedNoneSettings& Get() { return *GetDefault<UAccessedNoneSettings>(); }
@@ -90,7 +93,7 @@ public:
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Combat") float ArmoredDamageReduction = 0.99f;
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Combat") float ReflectRatio = 3.f;
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Combat") float LightMotionValue = 1.f;
-	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Combat") float HeavyMotionValue = 1.5f;
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Combat") float HeavyMotionValue = 2.f; // user revision: heavy = 2x light
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Combat") float DaggerMotionValue = 1.f;
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Combat") float DodgeIFrameSeconds = 0.3f;
 
@@ -132,21 +135,26 @@ public:
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Attack") float LightWindup = 0.25f;
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Attack") float LightActive = 0.15f;
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Attack") float LightRecovery = 0.35f;
-	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Attack") float HeavyWindup = 0.6f;
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Attack") float HeavyWindup = 0.8f; // user revision: damage lands 0.8 s after the input
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Attack") float HeavyActive = 0.2f;
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Attack") float HeavyRecovery = 0.5f;
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Attack") FVector PlayerHitboxExtent = FVector(100.f, 100.f, 90.f);
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Attack") FVector PlayerHitboxOffset = FVector(120.f, 0.f, 0.f);
 	/** A light attack within this many seconds of the previous one continues the combo. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Attack") float ComboResetSeconds = 1.2f;
-	/** Holding the attack button at least this long, then releasing, fires the full-charge heavy attack. */
-	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Attack") float HeavyChargeSeconds = 0.8f;
 
 	// --- Movement ---
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Movement", meta=(Units="cm/s")) float WalkSpeed = 500.f;
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Movement", meta=(Units="cm/s")) float DashSpeed = 900.f;
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Movement", meta=(Units="cm/s")) float DodgeSpeed = 1100.f;
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Movement") float DodgeDuration = 0.55f;
+	/** Seconds after a roll starts before the next roll is allowed. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Movement") float DodgeCooldown = 1.f;
+	/** Spark at the contact point when the player's weapon connects (enemies get no hit reaction). */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Combat|FX") TSoftObjectPtr<UParticleSystem> HitSparkFX =
+		TSoftObjectPtr<UParticleSystem>(FSoftObjectPath(TEXT("/Game/InfinityBladeEffects/Effects/FX_Combat_Base/Impact/P_Impact_Enemy_IB.P_Impact_Enemy_IB")));
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Combat|FX") TSoftObjectPtr<UParticleSystem> HeavyHitSparkFX =
+		TSoftObjectPtr<UParticleSystem>(FSoftObjectPath(TEXT("/Game/InfinityBladeEffects/Effects/FX_Combat_Base/Impact/P_Impact_Enemy_Strong.P_Impact_Enemy_Strong")));
 
 	// --- 3.4 Encounter specifics ---
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Encounter") float FakeBossHPMultiplier = 15.f;

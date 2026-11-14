@@ -68,6 +68,32 @@ void AMetaPlayerCharacter::BeginPlay()
 	RefillHealFlasks();
 	UpdateMoveSpeed();
 	SetHero(0);
+	DamageHandle = FMetaCombatEvents::OnDamage.AddUObject(this, &AMetaPlayerCharacter::HandleAnyDamage);
+}
+
+void AMetaPlayerCharacter::EndPlay(const EEndPlayReason::Type Reason)
+{
+	FMetaCombatEvents::OnDamage.Remove(DamageHandle);
+	Super::EndPlay(Reason);
+}
+
+bool AMetaPlayerCharacter::IsDodgeOnCooldown() const
+{
+	return GetWorld()->GetTimeSeconds() - LastDodgeTime < UAccessedNoneSettings::Get().DodgeCooldown;
+}
+
+void AMetaPlayerCharacter::HandleAnyDamage(AActor* Target, float Damage, bool bImmune)
+{
+	// Flinch on a landed enemy hit; not while rolling or dead (the lethal hit plays the death instead).
+	const FHeroDef* H = GetHeroDef();
+	if (Target != this || bImmune || Damage <= 0.f || IsDead() || GetHealth() <= 0.f || RollElapsed >= 0.f || !H)
+	{
+		return;
+	}
+	if (UAnimSequenceBase* Flinch = H->HitReactAnim.LoadSynchronous())
+	{
+		PlayAttackAnim(Flinch, Flinch->GetPlayLength());
+	}
 }
 
 void AMetaPlayerCharacter::SetHero(int32 Index)
@@ -94,6 +120,13 @@ void AMetaPlayerCharacter::SetHero(int32 Index)
 	M->RecreateClothingActors();
 	M->ForceClothNextUpdateTeleportAndReset();
 	SuppressIntroMontages();
+	if (!H.LightAttackAnims.IsEmpty())
+	{
+		if (UAnimMontage* First = Cast<UAnimMontage>(H.LightAttackAnims[0].LoadSynchronous()); First && !First->SlotAnimTracks.IsEmpty())
+		{
+			AttackSlot = First->SlotAnimTracks[0].SlotName;
+		}
+	}
 	AttackExtent = H.AttackExtent;
 	AttackOffset = H.AttackOffset;
 	// Over-the-shoulder view for the archer so the crosshair and target marker aren't hidden by her back.
@@ -309,14 +342,6 @@ void AMetaPlayerCharacter::PlayAttackMotion(bool bHeavy, float TotalSeconds)
 		return;
 	}
 	const FHeroDef& H = S.Heroes[HeroIndex];
-	if (!H.LightAttackAnims.IsEmpty())
-	{
-		// Sequence-based heavy attacks reuse the light montages' slot, so learn it first.
-		if (UAnimMontage* First = Cast<UAnimMontage>(H.LightAttackAnims[0].LoadSynchronous()); First && !First->SlotAnimTracks.IsEmpty())
-		{
-			AttackSlot = First->SlotAnimTracks[0].SlotName;
-		}
-	}
 	if (bHeavy)
 	{
 		PlayAttackAnim(H.HeavyAttackAnim.LoadSynchronous(), TotalSeconds);

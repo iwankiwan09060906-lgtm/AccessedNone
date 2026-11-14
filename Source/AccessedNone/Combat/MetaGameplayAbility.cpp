@@ -4,6 +4,10 @@
 #include "Characters/MetaPlayerCharacter.h"
 #include "Core/AccessedNoneSettings.h"
 #include "Core/MetaGameplayTags.h"
+#include "GameFramework/Character.h"
+#include "Components/CapsuleComponent.h"
+#include "Particles/ParticleSystem.h"
+#include "Kismet/GameplayStatics.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "Abilities/Tasks/AbilityTask_WaitDelay.h"
@@ -126,6 +130,17 @@ void UGA_MeleeAttack::Sweep()
 		Spec.Data->SetSetByCallerMagnitude(MetaTags::Data_MotionValue, P.MotionValue);
 		Spec.Data->AddDynamicAssetTag(P.DamageType);
 		SourceASC->ApplyGameplayEffectSpecToTarget(*Spec.Data, TargetASC);
+
+		// Hit spark where the blade meets the target's surface (enemies themselves don't flinch).
+		const bool bHeavy = P.DamageType == MetaTags::Damage_Type_Heavy;
+		if (UParticleSystem* FX = (bHeavy ? S.HeavyHitSparkFX : S.HitSparkFX).LoadSynchronous())
+		{
+			const ACharacter* TargetChar = Cast<ACharacter>(Target);
+			const float Radius = TargetChar ? TargetChar->GetCapsuleComponent()->GetScaledCapsuleRadius() : 40.f;
+			FVector Point = Target->GetActorLocation() + (Character->GetActorLocation() - Target->GetActorLocation()).GetSafeNormal2D() * Radius * 0.8f;
+			Point.Z = Character->GetActorLocation().Z + 30.f;
+			UGameplayStatics::SpawnEmitterAtLocation(Character, FX, Point, (Character->GetActorLocation() - Point).Rotation(), FVector(bHeavy ? 1.6f : 1.f));
+		}
 	}
 }
 
@@ -163,19 +178,20 @@ void UGA_Dodge::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 {
 	AMetaPlayerCharacter* Character = GetPlayerCharacter();
 	const UAccessedNoneSettings& S = UAccessedNoneSettings::Get();
-	if (!Character || !Character->TrySpendStamina(S.StaminaCostDodge))
+	// No roll while on cooldown or out of stamina.
+	if (!Character || Character->IsDodgeOnCooldown() || !Character->TrySpendStamina(S.StaminaCostDodge))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, false, true);
 		return;
 	}
+	Character->MarkDodgeUsed();
 
 	FVector Dir = Character->GetCharacterMovement()->GetLastInputVector().GetSafeNormal2D();
-	const bool bBackstep = Dir.IsNearlyZero();
-	if (bBackstep)
+	if (Dir.IsNearlyZero())
 	{
-		Dir = -Character->GetActorForwardVector(); // back roll, still facing forward
+		Dir = Character->GetActorForwardVector().GetSafeNormal2D(); // no input: roll the way the character faces
 	}
-	if (!Character->IsLockedOn() && !bBackstep)
+	if (!Character->IsLockedOn())
 	{
 		Character->SetActorRotation(Dir.Rotation());
 	}
