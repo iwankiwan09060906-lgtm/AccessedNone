@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "Meta/MetaSettingsSubsystem.h"
 #include "BossDataAsset.generated.h"
 
 class UGameplayEffect;
@@ -30,6 +31,17 @@ struct FBossPattern
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) FVector HitboxExtent = FVector(150, 150, 100);
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) FVector HitboxOffset = FVector(150, 0, 0);
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) TObjectPtr<UAnimMontage> OptionalMontage;
+};
+
+/** DA_Hint_*: debugger lines for death tiers 3 and 5 (spec 6.3 / 11.4). Tier 1 = boss visuals, tier 8 = menu blink. */
+UCLASS(BlueprintType)
+class ACCESSEDNONE_API UHintDataAsset : public UPrimaryDataAsset
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) FName Tier3Key;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) FName Tier5Key;
 };
 
 UCLASS(BlueprintType)
@@ -61,4 +73,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Boss") float RespawnDelay = 1.5f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<FBossPattern> PatternSet_Armored;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<FBossPattern> PatternSet_Vulnerable;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Hints") TObjectPtr<UHintDataAsset> HintAsset;
+	/** After defeat: settings eased back (E1 gamma → 0.5 over 2 s, E4 balance → 0 after 3 s). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Clear") TMap<EMetaSettingKey, float> RestoreSettingsOnDefeat;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Clear") float RestoreDelay = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Clear") float RestoreSeconds = 2.f;
+	/** Debugger line when the encounter is cleared (E1_CLEAR). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Clear") FName ClearMessageKey;
 };

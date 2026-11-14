@@ -1,6 +1,9 @@
 #include "Meta/EncounterSubsystem.h"
 #include "Meta/HintSubsystem.h"
 #include "Characters/MetaBossBase.h"
+#include "Characters/BossDataAsset.h"
+#include "Core/MetaText.h"
+#include "Meta/MetaSaveSubsystem.h"
 #include "Core/MetaLog.h"
 #include "Engine/GameInstance.h"
 #include "Kismet/GameplayStatics.h"
@@ -54,12 +57,24 @@ void UEncounterSubsystem::NotifyPlayerDied()
 
 	const FName Id = ActiveId;
 	const int32 Tier = GetHints() ? GetHints()->RegisterDeath(Id) : 0;
+	bool bHintSent = false;
 	for (const TWeakObjectPtr<AMetaBossBase>& Boss : ActiveBosses)
 	{
-		if (Boss.IsValid())
+		if (!Boss.IsValid())
 		{
-			Boss->ResetEncounter();
-			Boss->GetGimmick()->SetHintTier(Tier);
+			continue;
+		}
+		const int32 OldTier = Boss->GetGimmick()->GetHintTier();
+		Boss->ResetEncounter();
+		Boss->GetGimmick()->SetHintTier(Tier);
+		Boss->OnHintTier(Tier);
+		// Tiers 3 / 5: the debugger speaks (once per encounter, not per boss).
+		const UHintDataAsset* Hint = Boss->GetBossData() ? Boss->GetBossData()->HintAsset.Get() : nullptr;
+		const FName Key = !Hint || Tier == OldTier ? NAME_None : Tier == 3 ? Hint->Tier3Key : Tier == 5 ? Hint->Tier5Key : NAME_None;
+		if (!bHintSent && !Key.IsNone() && GetHints())
+		{
+			GetHints()->PushDebuggerMessage(MetaText::Get(*Key.ToString()));
+			bHintSent = true;
 		}
 	}
 	ActiveBosses.Reset();
@@ -89,6 +104,7 @@ void UEncounterSubsystem::NotifyBossDefeated(AMetaBossBase* Boss)
 	{
 		Hints->MarkEncounterCleared(Id);
 	}
+	GetWorld()->GetGameInstance()->GetSubsystem<UMetaSaveSubsystem>()->MarkEncounterDefeated(Id);
 	UE_LOG(LogGimmick, Log, TEXT("Encounter %s cleared"), *Id.ToString());
 	OnEncounterEnded.Broadcast(Id);
 }

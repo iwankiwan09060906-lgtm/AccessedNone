@@ -5,6 +5,7 @@
 #include "Core/MetaSaveGame.h"
 #include "Core/MetaText.h"
 #include "Meta/HintSubsystem.h"
+#include "Meta/MetaSaveSubsystem.h"
 #include "Meta/MetaSettingsSubsystem.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
@@ -109,23 +110,19 @@ UButton* UMetaTitleWidget::AddButton(UVerticalBox* Box, const TCHAR* Key)
 
 void UMetaTitleWidget::NewGame()
 {
-	GetGameInstance()->GetSubsystem<UMetaSettingsSubsystem>()->ResetAllToDefaults();
-	GetGameInstance()->GetSubsystem<UHintSubsystem>()->SetDeathCounts({}, {});
+	GetGameInstance()->GetSubsystem<UMetaSaveSubsystem>()->StartNewGame();
 	UGameplayStatics::OpenLevel(this, MetaLevels::Prologue);
 }
 
 void UMetaTitleWidget::Continue()
 {
-	const UMetaSaveGame* Save = Cast<UMetaSaveGame>(UGameplayStatics::LoadGameFromSlot(UMetaSaveGame::SlotName, UMetaSaveGame::UserIndex));
-	if (!Save)
+	const FName Level = GetGameInstance()->GetSubsystem<UMetaSaveSubsystem>()->LoadForContinue();
+	if (Level.IsNone())
 	{
-		UE_LOG(LogAccessedNone, Warning, TEXT("Continue: save slot unreadable, starting a new game"));
 		NewGame();
 		return;
 	}
-	GetGameInstance()->GetSubsystem<UMetaSettingsSubsystem>()->ReadFromSave(*Save);
-	GetGameInstance()->GetSubsystem<UHintSubsystem>()->SetDeathCounts(Save->DeathCountPerEncounter, Save->DefeatedEncounters);
-	UGameplayStatics::OpenLevel(this, Save->LastLevel.IsNone() ? MetaLevels::Stage1 : Save->LastLevel);
+	UGameplayStatics::OpenLevel(this, Level);
 }
 
 void UMetaTitleWidget::Quit()

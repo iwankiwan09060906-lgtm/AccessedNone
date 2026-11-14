@@ -24,6 +24,9 @@ public:
 	/** Gamma 0.5 = neutral. ±0.5 maps to ±GammaExposureRange EV; ≥ WhiteoutGamma adds WhiteoutExtraEV (E1). */
 	UPROPERTY(EditAnywhere, Category="Gamma") float GammaExposureRange = 3.f;
 	UPROPERTY(EditAnywhere, Category="Gamma") float GammaCurveRange = 0.6f;
+	/** Below 0.5 the picture darkens more gently: E1's 20 % is a dark forest with silhouettes, not a black screen. */
+	UPROPERTY(EditAnywhere, Category="Gamma") float DarkExposureRange = 1.8f;
+	UPROPERTY(EditAnywhere, Category="Gamma") float DarkCurveRange = 0.35f;
 	UPROPERTY(EditAnywhere, Category="Gamma") float WhiteoutGamma = 0.95f;
 	UPROPERTY(EditAnywhere, Category="Gamma") float WhiteoutExtraEV = 3.f;
 	/** Fastest change from darkest to whiteout (spec 12.3: the E1 whiteout takes ≥ 0.8 s). */

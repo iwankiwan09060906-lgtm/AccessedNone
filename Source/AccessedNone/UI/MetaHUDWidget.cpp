@@ -6,6 +6,7 @@
 #include "Characters/MetaPlayerCharacter.h"
 #include "Combat/MetaCombatAttributeSet.h"
 #include "Core/AccessedNoneSettings.h"
+#include "Core/MetaInteractable.h"
 #include "Core/MetaText.h"
 #include "Meta/EncounterSubsystem.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
@@ -100,6 +101,10 @@ TSharedRef<SWidget> UMetaHUDWidget::RebuildWidget()
 		BannerText->SetJustification(ETextJustify::Center);
 		Place(Canvas, BannerText, FVector2D(0.5f, 0.42f), FVector2D(0.5f, 0.5f), FVector2D::ZeroVector);
 
+		PromptText = MetaUI::Text(WidgetTree, FText::GetEmpty(), 20, FLinearColor(0.93f, 0.89f, 0.8f));
+		PromptText->SetShadowOffset(FVector2D(1.f, 1.f));
+		Place(Canvas, PromptText, FVector2D(0.5f, 0.72f), FVector2D(0.5f, 0.5f), FVector2D::ZeroVector);
+
 		Crosshair = MetaUI::Text(WidgetTree, FText::FromString(TEXT("+")), 30, FLinearColor(1.f, 1.f, 1.f, 0.85f), TEXT("Bold"));
 		Crosshair->SetShadowOffset(FVector2D(1.f, 1.f));
 		Crosshair->SetVisibility(ESlateVisibility::Collapsed);
@@ -149,11 +154,12 @@ void UMetaHUDWidget::ShowFloatingText(FVector WorldLocation, const FText& Text, 
 	Floating.Add({ T, WorldLocation, MetaUI::Now() });
 }
 
-void UMetaHUDWidget::ShowToast(const FText& Text, float Seconds)
+void UMetaHUDWidget::ShowToast(const FText& Text, float Seconds, FLinearColor Color)
 {
 	if (ToastText)
 	{
 		ToastText->SetText(Text);
+		ToastText->SetColorAndOpacity(FSlateColor(Color));
 		ToastEndTime = MetaUI::Now() + Seconds;
 	}
 }
@@ -242,6 +248,10 @@ void UMetaHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 		StaminaBar->SetPercent(SP);
 		HealthTrail->SetPercent(MetaUI::StepTrail(HealthTrail->GetPercent(), HP, InDeltaTime, HealthTrailHold));
 		StaminaTrail->SetPercent(MetaUI::StepTrail(StaminaTrail->GetPercent(), SP, InDeltaTime, StaminaTrailHold));
+		// "[E] ..." for the nearest usable thing.
+		const IMetaInteractable* Usable = P->IsDead() ? nullptr : P->FindInteractable();
+		PromptText->SetText(Usable ? Usable->GetInteractPrompt() : FText::GetEmpty());
+
 		const bool bAim = P->IsRanged() && !P->IsDead() && bStatusVisible;
 		Crosshair->SetVisibility(bAim ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 		if (bAim)

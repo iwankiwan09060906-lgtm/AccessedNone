@@ -60,7 +60,8 @@ void AMetaPostProcessController::ApplyGamma(float Gamma)
 {
 	FPostProcessSettings& S = PostProcess->Settings;
 	const float Offset = Gamma - 0.5f;
-	float EV = Offset * 2.f * GammaExposureRange;
+	const bool bDark = Offset < 0.f;
+	float EV = Offset * 2.f * (bDark ? DarkExposureRange : GammaExposureRange);
 	if (Gamma >= WhiteoutGamma)
 	{
 		EV += WhiteoutExtraEV * FMath::GetRangePct(WhiteoutGamma, 1.f, Gamma);
@@ -68,7 +69,7 @@ void AMetaPostProcessController::ApplyGamma(float Gamma)
 	S.bOverride_AutoExposureBias = true;
 	S.AutoExposureBias = EV;
 	S.bOverride_ColorGamma = true;
-	S.ColorGamma = FVector4(FVector(1.f + Offset * 2.f * GammaCurveRange), 1.f);
+	S.ColorGamma = FVector4(FVector(1.f + Offset * 2.f * (bDark ? DarkCurveRange : GammaCurveRange)), 1.f);
 }
 
 void AMetaPostProcessController::ApplyStatic(EMetaSettingKey Key, float Value)

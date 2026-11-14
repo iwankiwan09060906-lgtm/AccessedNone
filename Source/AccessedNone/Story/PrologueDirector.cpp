@@ -4,6 +4,7 @@
 #include "Characters/MetaPlayerCharacter.h"
 #include "Combat/MetaGameplayAbility.h"
 #include "Combat/MetaGameplayEffects.h"
+#include "Core/MetaGameMode.h"
 #include "Core/MetaLevels.h"
 #include "Core/MetaLog.h"
 #include "Core/MetaPlayerController.h"
@@ -116,6 +117,10 @@ void APrologueDirector::BeginPlay()
 				}
 			}
 		}
+	}
+	if (AMetaGameMode* GM = GetWorld()->GetAuthGameMode<AMetaGameMode>())
+	{
+		GM->bRespawnEnabled = false; // the opening restarts itself / ends in the error window
 	}
 	if (UEncounterSubsystem* Encounters = GetWorld()->GetSubsystem<UEncounterSubsystem>())
 	{

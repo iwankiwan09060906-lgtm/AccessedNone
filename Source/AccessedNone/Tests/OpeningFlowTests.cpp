@@ -13,6 +13,10 @@
 #include "Meta/EncounterSubsystem.h"
 #include "Core/AccessedNoneSettings.h"
 #include "Core/MetaLevels.h"
+#include "Meta/MetaSettingsSubsystem.h"
+#include "Core/MetaSaveGame.h"
+#include "Core/MetaGameMode.h"
+#include "Core/BreakpointActor.h"
 #include "Core/MetaPlayerController.h"
 #include "Gimmick/EncounterTriggerBox.h"
 #include "Story/PrologueDirector.h"
@@ -251,6 +255,51 @@ bool FEnemyChaseTest::RunTest(const FString& Parameters)
 			TestTrue(FString::Printf(TEXT("minion %d closed in"), i), Now < S->StartDist[i] - 400.f);
 		}
 	}, 2.5f);
+	return true;
+}
+
+#endif
+
+#if WITH_DEV_AUTOMATION_TESTS
+
+/**
+ * Title → Continue: settings and defeated encounters come back, the player spawns at the saved breakpoint.
+ *   UnrealEditor-Cmd AccessedNone.uproject /Game/Maps/L_Title -game -nullrhi -ExecCmds="Automation RunTests AccessedNone.Flow.Continue; Quit"
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FContinueFlowTest, "AccessedNone.Flow.Continue", EAutomationTestFlags::ClientContext | EAutomationTestFlags::ProductFilter)
+bool FContinueFlowTest::RunTest(const FString& Parameters)
+{
+	AddExpectedError(TEXT("ResetOrientationAndPosition"), EAutomationExpectedErrorFlags::Contains, 0); // Paragon asset pack, see DECISIONS.md
+	if (!InMap(MetaLevels::Title))
+	{
+		AddError(TEXT("Start the game in L_Title"));
+		return false;
+	}
+	UMetaSaveGame* Save = NewObject<UMetaSaveGame>();
+	Save->LastLevel = MetaLevels::Stage1;
+	Save->LastBreakpointId = TEXT("BP_Stage1_Hall");
+	Save->DefeatedEncounters.Add(TEXT("E1"));
+	Save->MetaSettings.Add(EMetaSettingKey::Gamma, 0.8f);
+	TestTrue(TEXT("save written"), UGameplayStatics::SaveGameToSlot(Save, UMetaSaveGame::SlotName, UMetaSaveGame::UserIndex));
+
+	Then([this]()
+	{
+		TObjectIterator<UMetaTitleWidget> It;
+		if (TestTrue(TEXT("title widget"), static_cast<bool>(It))) { It->Continue(); }
+	}, 0.5f);
+	WaitUntil(this, TEXT("Stage 1 loaded"), 30.0, []() { return InMap(MetaLevels::Stage1) && UGameplayStatics::GetPlayerPawn(GameWorld(), 0); });
+	Then([this]()
+	{
+		const APawn* P = UGameplayStatics::GetPlayerPawn(GameWorld(), 0);
+		ABreakpointActor* Hall = nullptr;
+		for (TActorIterator<ABreakpointActor> It(GameWorld()); It; ++It) { if (It->BreakpointId == FName(TEXT("BP_Stage1_Hall"))) { Hall = *It; } }
+		TestTrue(TEXT("spawned at the saved breakpoint"), Hall && FVector::Dist2D(P->GetActorLocation(), Hall->GetRespawnTransform().GetLocation()) < 200.f);
+		TestEqual(TEXT("respawn point restored"), GameWorld()->GetAuthGameMode<AMetaGameMode>()->GetActiveBreakpoint(), Hall);
+		TestNearlyEqual(TEXT("settings restored"), GameWorld()->GetGameInstance()->GetSubsystem<UMetaSettingsSubsystem>()->GetValue(EMetaSettingKey::Gamma), 0.8f, 0.001f);
+		bool bAssassinLeft = false;
+		for (TActorIterator<AMetaBossBase> It(GameWorld()); It; ++It) { bAssassinLeft |= It->GetClass()->GetName().Contains(TEXT("Assassin")); }
+		TestFalse(TEXT("defeated E1 stays defeated"), bAssassinLeft);
+	}, 1.f);
 	return true;
 }
 

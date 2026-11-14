@@ -49,6 +49,17 @@
 
 **Stage 2 DoD:** 빌드 경고 0 ✅ · 에디터 테스트 15/15 + 게임 테스트 2/2 (`Flow.Opening`, `Sandbox.BossFlow`) ✅ · 타이틀 → 엔딩 직전 스테이지 1 진입까지 한 번에 진행(`Flow.Opening`, 렌더링 + 스크린샷 14장) ✅ · GameUserSettings 미변경 ✅ · **손 조작 확인 대기 (MANUAL_STEPS #4)**
 
-## Stage 3~6
+## Stage 3: 스테이지 1 인카운터 (E1 암살자 & E2 가시 기사)
+
+| ID | 작업 | 상태 | 검증 / 메모 |
+|---|---|---|---|
+| S3-T01 | 브레이크포인트 | DONE | `ABreakpointActor`(붉은 구, `[E]` 상호작용 → HP·회복약 회복, 저장, 리스폰 지점), `IMetaInteractable`, `UMetaSaveSubsystem`(저장·이어하기·처치 기록), `AMetaGameMode` 사망 → 사망 화면 → 2.5초 후 제자리 부활(레벨 재로드 없음), 3/5회 디버거 힌트(`DA_Hint_E1/E2`), 8회 메뉴 점멸. `Flow.Continue` 통과 |
+| S3-T02 | 레벨 | DONE | `L_Stage1_DarkGrove`: 어두운 숲(나무·고사리·뿌리·바위, 짙은 안개), 출발 브레이크포인트, E1 숲속 공터 + 비석 `E1_STELE`(`AMetaInscription`), 두 번째 브레이크포인트, 로우폴리 파편, E2 폐허 홀 |
+| S3-T03 | E1 | DONE | `AAssassinBoss`/`BP_Assassin`/`DA_Boss_Assassin`(Paragon Sevarog): 은신(메시 숨김 + 눈 반짝임, 1회 사망 후 더 자주) + 무적 + 즉사 기습, 감마 20% 강제, ≥95% → 0.8초 화이트아웃에 드러남 → 6초 스턴 → 약공격 3회, 처치 후 감마 2초에 50%로 + `E1_CLEAR` |
+| S3-T04 | E2 | DONE | `AThornKnightBoss`/`BP_ThornKnight`/`DA_Boss_ThornKnight`(Paragon Grux, 3배): 가시 26개(`Spike_Hitbox_*`), `Triangles: 48,000,000` 표시, 등장 시 프레임 드랍 연출, 99% 감쇄 + 300% 반사, 품질 3 강제, 0 → 0.6초 가시 디졸브 + 최저 LOD + 가시 콜리전 off → 약공격 10회 |
+
+**Stage 3 DoD:** 빌드 경고 0 ✅ · 에디터 15/15 + 게임 9/9 ✅ · `Stage1.Encounters`(게임 내): E1·E2 각각 ① 정공법 불합리(무적 / 1% + 300% 반사) ② 사망 1·3·5·8회 힌트 단계(디버거 3·5회, 메뉴 점멸 8회), 매번 3초 내 브레이크포인트 부활 ③ 설정으로 파훼 후 처치 ✅ · 미리 맞춘 설정 진입 시 리셋(`Encounter.PreSetReset` 내용을 같은 테스트에 포함) ✅ · 시각 확인 `Stage1.Tour` 스크린샷 ✅ · **손 조작 확인 대기 (MANUAL_STEPS #6)**
+
+## Stage 4~6
 
 TODO

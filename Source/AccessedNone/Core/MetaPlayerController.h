@@ -27,6 +27,7 @@ public:
 	/** ESC. During a combat encounter the world slows to EncounterMenuTimeDilation (spec 2.2). */
 	UFUNCTION(BlueprintCallable, Category="Menu") void ToggleMenu();
 	UFUNCTION(BlueprintPure, Category="Menu") bool IsMenuOpen() const { return MenuWidget != nullptr; }
+	UFUNCTION(BlueprintPure, Category="Menu") UUserWidget* GetMenuWidget() const { return MenuWidget; }
 
 	// --- Dev commands (spec S1 DoD allows temporary debug commands) ---
 	/** an.Set Gamma 0.95 — sets a virtual setting as if the player used the menu. */
@@ -59,6 +60,7 @@ private:
 	void OnLightAttack();
 	void OnHeavyAttack();
 	void OnUseItem();
+	void OnInteract();
 	void OnMenu() { ToggleMenu(); }
 	template <int32 Index> void OnSelectHero();
 

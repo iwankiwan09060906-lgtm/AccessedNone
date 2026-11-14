@@ -26,6 +26,7 @@ public:
 	UFUNCTION(BlueprintPure) int32 GetTier(FName EncounterId) const { return GetTierForDeaths(GetDeathCount(EncounterId)); }
 
 	UFUNCTION(BlueprintCallable) void PushDebuggerMessage(const FText& Message);
+	UFUNCTION(BlueprintPure) FText GetLastDebuggerMessage() const { return LastMessage; }
 
 	void SetDeathCounts(const TMap<FName, int32>& InCounts, const TSet<FName>& InCleared);
 	const TMap<FName, int32>& GetDeathCounts() const { return DeathCounts; }
@@ -36,4 +37,5 @@ public:
 private:
 	TMap<FName, int32> DeathCounts;
 	TSet<FName> Cleared;
+	FText LastMessage;
 };

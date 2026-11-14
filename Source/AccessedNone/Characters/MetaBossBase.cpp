@@ -17,6 +17,9 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Animation/AnimSequenceBase.h"
 #include "TimerManager.h"
+#include "Containers/Ticker.h"
+#include "Core/MetaText.h"
+#include "Meta/HintSubsystem.h"
 
 AMetaBossBase::AMetaBossBase()
 {
@@ -133,6 +136,7 @@ void AMetaBossBase::HandleGimmickStateChanged(EGimmickState Old, EGimmickState N
 		Patterns->Stop();
 		RemoveStateEffects();
 		PlayDeathAndVanish();
+		ApplyClearEffects();
 		OnDefeated();
 		if (UEncounterSubsystem* Encounters = GetWorld()->GetSubsystem<UEncounterSubsystem>())
 		{
@@ -216,5 +220,40 @@ void AMetaBossBase::SetPresent(bool bPresent)
 	{
 		GetMesh()->SetAnimationMode(EAnimationMode::AnimationBlueprint); // leave the held death pose
 		SuppressIntroMontages();
+	}
+}
+
+void AMetaBossBase::ApplyClearEffects()
+{
+	if (!BossData)
+	{
+		return;
+	}
+	if (!BossData->ClearMessageKey.IsNone())
+	{
+		GetGameInstance()->GetSubsystem<UHintSubsystem>()->PushDebuggerMessage(MetaText::Get(*BossData->ClearMessageKey.ToString()));
+	}
+	if (BossData->RestoreSettingsOnDefeat.IsEmpty())
+	{
+		return;
+	}
+	// Real time: the restore must not stall under menu time dilation.
+	TWeakObjectPtr<UGameInstance> GI = GetGameInstance();
+	const TMap<EMetaSettingKey, float> Restore = BossData->RestoreSettingsOnDefeat;
+	const float Seconds = BossData->RestoreSeconds;
+	auto Run = [GI, Restore, Seconds]()
+	{
+		if (UMetaSettingsSubsystem* S = GI.IsValid() ? GI->GetSubsystem<UMetaSettingsSubsystem>() : nullptr)
+		{
+			for (const TPair<EMetaSettingKey, float>& R : Restore) { S->RestoreOverTime(R.Key, R.Value, Seconds); }
+		}
+	};
+	if (BossData->RestoreDelay <= 0.f)
+	{
+		Run();
+	}
+	else
+	{
+		FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([Run](float) { Run(); return false; }), BossData->RestoreDelay);
 	}
 }

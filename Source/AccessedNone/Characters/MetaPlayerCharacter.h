@@ -44,6 +44,12 @@ public:
 	void SetAttackFacing(bool bFacing);
 
 	bool IsDodgeOnCooldown() const;
+
+	/** Nearest IMetaInteractable within InteractRange that currently offers a prompt. */
+	class IMetaInteractable* FindInteractable() const;
+	void Interact();
+	/** Back on its feet at At with full HP, stamina and flasks (breakpoint respawn, spec 6.2). */
+	void Revive(const FTransform& At);
 	void MarkDodgeUsed() { LastDodgeTime = GetWorld()->GetTimeSeconds(); }
 
 	/** Somersault the mesh along WorldDir over Seconds (the roll has no animation asset). */

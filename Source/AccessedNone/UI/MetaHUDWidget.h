@@ -21,7 +21,7 @@ class ACCESSEDNONE_API UMetaHUDWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintCallable) void ShowToast(const FText& Text, float Seconds = 2.f);
+	UFUNCTION(BlueprintCallable) void ShowToast(const FText& Text, float Seconds = 2.f, FLinearColor Color = FLinearColor(0.898f, 0.141f, 0.231f));
 	UFUNCTION(BlueprintCallable) void ShowFloatingText(FVector WorldLocation, const FText& Text, FLinearColor Color, float Size = 22.f);
 	/** Big centered text. Empty text hides it. */
 	UFUNCTION(BlueprintCallable) void ShowBanner(const FText& Text, FLinearColor Color, float Size = 64.f);
@@ -64,6 +64,7 @@ private:
 	UPROPERTY() TObjectPtr<UMetaBossBarWidget> BossBar;
 	UPROPERTY() TObjectPtr<UTextBlock> ToastText;
 	UPROPERTY() TObjectPtr<UTextBlock> Crosshair;
+	UPROPERTY() TObjectPtr<UTextBlock> PromptText;
 	UPROPERTY() TObjectPtr<UTextBlock> BannerText;
 	UPROPERTY() TObjectPtr<UVerticalBox> LogBox;
 	UPROPERTY() TObjectPtr<UBorder> TutorialBox;

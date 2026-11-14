@@ -9,6 +9,9 @@
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"
 #include "Characters/MetaProjectile.h"
+#include "Core/MetaGameMode.h"
+#include "Core/MetaGameplayTags.h"
+#include "Core/MetaInteractable.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -75,6 +78,47 @@ void AMetaPlayerCharacter::EndPlay(const EEndPlayReason::Type Reason)
 {
 	FMetaCombatEvents::OnDamage.Remove(DamageHandle);
 	Super::EndPlay(Reason);
+}
+
+IMetaInteractable* AMetaPlayerCharacter::FindInteractable() const
+{
+	constexpr float InteractRange = 250.f;
+	TArray<FOverlapResult> Overlaps;
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(Interact), false, this);
+	GetWorld()->OverlapMultiByObjectType(Overlaps, GetActorLocation(), FQuat::Identity, FCollisionObjectQueryParams(FCollisionObjectQueryParams::AllObjects),
+		FCollisionShape::MakeSphere(InteractRange), Params);
+	IMetaInteractable* Best = nullptr;
+	float BestDistSq = TNumericLimits<float>::Max();
+	for (const FOverlapResult& O : Overlaps)
+	{
+		IMetaInteractable* I = Cast<IMetaInteractable>(O.GetActor());
+		const float DistSq = I ? FVector::DistSquared(O.GetActor()->GetActorLocation(), GetActorLocation()) : 0.f;
+		if (I && DistSq < BestDistSq && !I->GetInteractPrompt().IsEmpty())
+		{
+			Best = I;
+			BestDistSq = DistSq;
+		}
+	}
+	return Best;
+}
+
+void AMetaPlayerCharacter::Interact()
+{
+	if (IMetaInteractable* I = IsDead() ? nullptr : FindInteractable())
+	{
+		I->Interact(this);
+	}
+}
+
+void AMetaPlayerCharacter::Revive(const FTransform& At)
+{
+	AbilitySystem->SetLooseGameplayTagCount(MetaTags::State_Dead, 0);
+	AbilitySystem->SetNumericAttributeBase(UMetaCombatAttributeSet::GetHealthAttribute(), Attributes->GetMaxHealth());
+	AbilitySystem->SetNumericAttributeBase(UMetaCombatAttributeSet::GetStaminaAttribute(), Attributes->GetMaxStamina());
+	RefillHealFlasks();
+	SetActorLocationAndRotation(At.GetLocation(), At.GetRotation(), false, nullptr, ETeleportType::TeleportPhysics);
+	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	SetHero(HeroIndex); // back from the held death pose to the hero's anim BP
 }
 
 bool AMetaPlayerCharacter::IsDodgeOnCooldown() const
@@ -546,5 +590,9 @@ void AMetaPlayerCharacter::HandleDeath(const FGameplayEventData* Payload)
 	if (UEncounterSubsystem* Encounters = GetWorld()->GetSubsystem<UEncounterSubsystem>())
 	{
 		Encounters->NotifyPlayerDied();
+	}
+	if (AMetaGameMode* GM = GetWorld()->GetAuthGameMode<AMetaGameMode>())
+	{
+		GM->HandlePlayerDeath(this);
 	}
 }

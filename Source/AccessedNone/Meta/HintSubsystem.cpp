@@ -45,6 +45,7 @@ int32 UHintSubsystem::GetDeathCount(FName EncounterId) const
 
 void UHintSubsystem::PushDebuggerMessage(const FText& Message)
 {
+	LastMessage = Message;
 	UE_LOG(LogAccessedNone, Log, TEXT("[Debugger] %s"), *Message.ToString());
 	OnDebuggerMessage.Broadcast(Message);
 }

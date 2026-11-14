@@ -108,3 +108,14 @@
 | 2026-11-14 | 궁수 화살은 조준이 적에 걸리면 적의 몸 중심을 향해 발사 | 큰 보스의 팔·북 같은 메시 돌출부에 조준점이 잡혀 화살이 캡슐 옆으로 빗나갔음(테스트에서 발견) |
 | 2026-11-14 | (사용자 지시) 플레이어 사망 시 영웅별 `DeathAnim`(Paragon Death/Death_Fwd) 단일 노드 재생, 마지막 프레임 유지 | "공격을 맞아 죽어도 서 있음". shortcut: 제자리 부활(S3-T01) 시 애님 BP 모드 복구 필요 |
 | 2026-11-14 | (사용자 지시) 카메라 거리: 평상시 `CameraArmLength` 400, 락온 시 400 + `LockOnArmBonus` 60 + (대상 캡슐 반높이 − 96) × `LockOnArmPerHeight` 1.5, 최대 `CameraArmMax` 750, `FInterpTo` 속도 3으로 부드럽게 이동. 일반 적 락온 ≈ 460, 3배 보스 ≈ 750 | 대형 보스전 시야 확보. 대상 크기는 캡슐 기준(메시 바운딩 박스는 무기·팔 포즈에 따라 출렁임) |
+| 2026-11-15 | 상호작용(`E`)은 `IMetaInteractable` 인터페이스(프롬프트 + 실행). 플레이어 반경 250cm 안 가장 가까운 대상, HUD 하단 `[E] ...` 표시. 키 `UI_BREAKPOINT_PROMPT`, `UI_READ_PROMPT` 추가 | 브레이크포인트·비석·이후 대화/피니셔가 같은 경로 |
+| 2026-11-15 | 저장/이어하기는 `UMetaSaveSubsystem`(진행 상황 + 슬롯). 새 게임은 진행 초기화(파일은 다음 브레이크포인트에서 덮어씀). 처치한 인카운터는 세션에 기록되고 저장 시 기록, 레벨 시작 시 해당 보스·트리거 제거 | 타이틀·브레이크포인트·인카운터가 한 곳을 공유 |
+| 2026-11-15 | 사망 → `WBP_DeathScreen` → 2.5초(≤ `RespawnMaxSeconds` 3초) 후 마지막 브레이크포인트 앞에서 제자리 부활(레벨 재로드 없음, HP·스태미나·회복약 가득, 애님 BP 복구). 브레이크포인트를 쓰지 않았으면 레벨 시작 지점. 오프닝은 `bRespawnEnabled=false`로 자체 흐름 유지 | 6.2 "액터 리셋 방식 권장" |
+| 2026-11-15 | 힌트: 3·5회 사망 시 `UHintDataAsset`(`DA_Hint_*`, Tier3Key/Tier5Key) 문구를 디버거로(인카운터당 1회), 1회부터 보스별 이상 징후 강화(`AMetaBossBase::OnHintTier` — 암살자 눈 반짝임 빈도, 가시 기사 삼각형 수 표시 맥동), 8회 메뉴 점멸(기존) | 6.3 |
+| 2026-11-15 | 처치 후 설정 복구는 `UBossDataAsset.RestoreSettingsOnDefeat/RestoreDelay/RestoreSeconds`, 클리어 대사는 `ClearMessageKey` (실시간 기준) | E1(감마 2초) · E4(3초 후 밸런스)에서 재사용 |
+| 2026-11-15 | E1 암살자 = Paragon Sevarog, 은신은 메시 숨김 + `Gimmick.Stealth` 태그(디더 머티리얼 대신), 눈은 머리 소켓의 붉은 포인트 라이트. 잡몹이지만 `E1_NAME`으로 보스 바 표시 | 외부 머티리얼 그래프 편집 없이 은신 표현 |
+| 2026-11-15 | E2 가시 기사 = Paragon Grux ×3. 'SK_ThornKnight_High/Low' 교체는 가시(엔진 원뿔 26개 = `Spike_Hitbox_*`) 0.6초 축소 소멸 + 스켈레탈 메시 최저 LOD 강제(`SetForcedLOD`)로 구현. 등장 시 프레임 드랍은 1.5초간 `t.MaxFPS 9`(게임 콘솔 변수, OS 아님) | 스켈레탈 메시 에셋을 만들 수 없음. '모델링 품질'을 실제로 낮춘 모습 |
+| 2026-11-15 | `AMetaBossBase.BossData`를 `EditAnywhere`로(명세 8.6은 EditDefaultsOnly) | 이번 실행에서 새로 만든 BP의 배치 인스턴스는 CDO 값을 받지 못해 None으로 저장됨 → 레벨 스크립트가 인스턴스에 직접 지정 |
+| 2026-11-15 | 감마 0.5 미만은 완만하게 어두워짐(노출 ±1.8EV, 커브 0.35). 0.2 = 실루엣만 보이는 어두운 숲 | 이전 매핑은 0.2에서 화면이 완전히 검게 되어 캐릭터조차 안 보였음(투어 스크린샷) |
+| 2026-11-15 | `Encounter.PreSetReset`은 `Stage1.Encounters` 안에서 E1·E2 각각 검증(별도 테스트로 분리하지 않음). 시각 확인용 `Stage1.Tour`(플레이어 무적 태그로 연출만 촬영) | 실제 보스로 검증하는 편이 의미 있음 |
+| 2026-11-15 | L_Stage1_DarkGrove 끝에서 스테이지 2로 넘어가는 출구는 S4-T02에서 추가 | `L_Stage2_StatueGate`가 아직 없음 |

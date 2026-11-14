@@ -232,6 +232,7 @@ void AMetaPlayerController::SetupInputComponent()
 	Bind(TEXT("IA_LightAttack"), ETriggerEvent::Triggered, &AMetaPlayerController::OnLightAttack);
 	Bind(TEXT("IA_HeavyAttack"), ETriggerEvent::Triggered, &AMetaPlayerController::OnHeavyAttack);
 	Bind(TEXT("IA_UseItem"), ETriggerEvent::Triggered, &AMetaPlayerController::OnUseItem);
+	Bind(TEXT("IA_Interact"), ETriggerEvent::Triggered, &AMetaPlayerController::OnInteract);
 	Bind(TEXT("IA_Menu"), ETriggerEvent::Triggered, &AMetaPlayerController::OnMenu);
 
 	// Dev hero switch (keys 1-4): raw key bindings, no input asset needed.
@@ -259,4 +260,5 @@ void AMetaPlayerController::OnJump()        { if (AMetaPlayerCharacter* C = GetM
 void AMetaPlayerController::OnLockOn()      { if (AMetaPlayerCharacter* C = GetMetaCharacter()) { C->ToggleLockOn(); } }
 void AMetaPlayerController::OnLightAttack() { if (AMetaPlayerCharacter* C = GetMetaCharacter()) { C->ActivateAbility(UGA_LightAttack::StaticClass()); } }
 void AMetaPlayerController::OnHeavyAttack() { if (AMetaPlayerCharacter* C = GetMetaCharacter()) { C->ActivateAbility(UGA_HeavyAttack::StaticClass()); } }
+void AMetaPlayerController::OnInteract()     { if (AMetaPlayerCharacter* C = GetMetaCharacter()) { C->Interact(); } }
 void AMetaPlayerController::OnUseItem()     { if (AMetaPlayerCharacter* C = GetMetaCharacter()) { C->ActivateAbility(UGA_Heal::StaticClass()); } }
