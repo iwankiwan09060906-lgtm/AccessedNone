@@ -1,5 +1,7 @@
 # ACCESSED NONE — 개발 시작 전 준비 체크리스트
 
+> **상태 (2026-11-15): 완료된 초기 준비 문서입니다.** 개발은 Stage 3까지 진행됐습니다. 마스터 명세는 이 문서가 말하는 `AccessedNone_MasterPrompt.md` 대신 프로젝트 루트의 `CLAUDE.md`에 통합되어 있고, 진행 상황은 `Docs/PROGRESS.md`가 기준입니다. 아래 내용은 기록용으로 남겨 둡니다.
+
 이 문서의 모든 항목에 체크하면 Claude Code에게 **"Stage 1부터 시작해"** 한 마디로 개발을 처음부터 끝까지 맡길 수 있습니다.
 기준 문서: `AccessedNone_MasterPrompt.md` (마스터 명세)
 

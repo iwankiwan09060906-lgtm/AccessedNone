@@ -6,6 +6,7 @@
 > - **[확정]** — 변경 금지. 사용자 승인 없이 바꾸지 않습니다.
 > - **[기본값]** — 에이전트가 시작값으로 사용하되, 플레이테스트 결과에 따라 튜닝 설정(`UAccessedNoneSettings`)에서 조정할 수 있습니다.
 > - `코드체` — 실제 클래스명, 에셋명, 태그명, 명령어. 철자를 그대로 사용합니다.
+> - *(개정 YYYY-MM-DD)* — 사용자 지시로 바뀐 항목. 이 문서에는 바뀐 결과만 적고, 원래 값·이유·구현 상세는 `Docs/DECISIONS.md`의 같은 날짜 "(사용자 지시)" 행에 있습니다.
 
 ---
 
@@ -183,18 +184,18 @@ Behavior Tree, Anim Blueprint 로직, 복잡한 머티리얼 그래프, Niagara 
 | 입력 | 동작 | 비고 |
 |---|---|---|
 | `W` `A` `S` `D` | 이동 | |
-| `Space` 탭 | 구르기 | 무적 프레임 0.3초 |
-| `Space` 홀드 | 대시 | 홀드 판정 0.2초 [기본값] |
+| `Space` | 구르기 | 무적 프레임 0.3초, 쿨타임 1초, 입력 없으면 정면으로. 대시는 삭제 *(개정 2026-11-14)* |
 | `F` | 점프 | 구르기와 분리 |
 | 마우스 이동 | 카메라 회전 | |
 | 마우스 휠 클릭 | 타겟 락온 토글 | |
 | 마우스 좌클릭 | 약공격 | |
-| `Left Shift` + 좌클릭 | 강공격 | Chorded Action |
+| `Left Shift` + 좌클릭 | 강공격 | Chorded Action, 윈드업 0.8초, 약공격의 2배 *(개정 2026-11-14)* |
 | `R` | 아이템 사용 (회복약) | |
 | `E` | 상호작용 | 대화, 브레이크포인트, 피니셔 |
 | `ESC` | 시스템 메뉴 / 가상 설정창 | |
 | `~` (틸드) | 가상 개발자 콘솔 | 최종 보스전 해금 후에만 활성 |
 | 마우스 드래그 & 드롭, 키보드 타이핑 | UI 직접 조작 | 오류창, 이름표, 콘솔 |
+| `1`~`4` | 캐릭터 교체 (개발용) | Paragon Greystone / Sparrow(원거리) / FengMao / Terra |
 
 ### 2.2 시간 배율 (Time Dilation) [확정]
 
@@ -217,13 +218,13 @@ Behavior Tree, Anim Blueprint 로직, 복잡한 머티리얼 그래프, Niagara 
 
 ### 3.1 전투 설계 공식 [확정]
 
-모든 보스는 정공법으로 처치가 거의 불가능하고(99% 데미지 감쇄, 완전 무적, 300% 반사), 기믹을 파훼하면 **Vulnerable State(약점화)**로 바뀌어 약공격 10회 내외로 처치됩니다.
+모든 보스는 정공법으로 처치가 거의 불가능하고(99% 데미지 감쇄, 완전 무적, 300% 반사, 즉사 반격), 기믹을 파훼하면 **Vulnerable State(약점화)**로 바뀌어 약공격 10회 내외로 처치됩니다.
 
 ```text
 BossMaxHP        = 현재 플레이어 AttackPower(D) × 10      (잡몹은 × 3)
 Armored DR       = 0.99   → 데미지 1%만 적용, 약공격 1,000회 필요
 Vulnerable DR    = 0.00   → 감쇄 완전 해제
-HeavyAttack 배율  = × 1.5  → 약점화 후 약 7회에 처치
+HeavyAttack 배율  = × 2.0  → 약점화 후 5회에 처치          (개정 2026-11-14)
 ```
 
 - **보스 HP는 인카운터 시작 시점의 플레이어 `AttackPower`로 계산합니다.** E3 빙의 이후 D가 100 → 250으로 바뀌어도 "약점화 후 10회"가 유지됩니다.
@@ -246,7 +247,7 @@ HeavyAttack 배율  = × 1.5  → 약점화 후 약 7회에 처치
 | 공격 | MotionValue |
 |---|---|
 | 약공격 | 1.0 |
-| 강공격 | 1.5 |
+| 강공격 | 2.0 *(개정 2026-11-14)* |
 | 투척 단검 (E5) | 1.0 |
 
 ### 3.3 기준 스탯 테이블 [확정]
@@ -265,7 +266,10 @@ HeavyAttack 배율  = × 1.5  → 약점화 후 약 7회에 처치
 
 | 항목 | 값 |
 |---|---|
-| 스태미나 소모: 구르기 / 대시(초당) / 약공격 / 강공격 / 점프 | 20 / 10 / 10 / 25 / 10 |
+| 스태미나 소모: 구르기 / 약공격 / 강공격 / 점프 | 20 / 10 / 25 / 10 (대시 삭제) |
+| 구르기 | 0.55초, 1100cm/s, 쿨타임 1초 *(개정 2026-11-14)* |
+| 보스 크기 | 보스 `BodyScale` 3.0 (판정·사거리 비례), 잡몹 1.0 *(개정 2026-11-14)* |
+| 적 추격 | 어그로 18m 안에서만 추격, 밖이면 대기 |
 | 스태미나 회복 | 초당 30, 마지막 소모 후 0.8초 지연 |
 | 회복약 사용 시간 | 1.0초 (사용 중 이동 속도 50%) |
 | 락온 탐색 | 반경 15m, 전방 60° 원뿔 |
@@ -302,9 +306,9 @@ stateDiagram-v2
 
 | 항목 | 내용 |
 |---|---|
-| 레벨 | `L_Prologue_FlowerField` — 달밤의 흰 꽃밭 |
-| HUD | 정상적인 소울라이크 HUD (좌상단 HP·FP·스태미나, 좌하단 퀵슬롯, 하단 중앙 보스 이름+체력바) |
-| 보스 | **「잿빛 왕관의 대주교, 엘베른」** (`BP_FakeBoss_Elbern`) — 데미지 감쇄 없음, 기본 공격과 구르기만으로 쉽게 처치 |
+| 레벨 | `L_Prologue_FlowerField` — 달밤의 흰 꽃밭 → 가짜 잡몹 3체(Paragon Khaimera, HP D×3, 이름 없음) → 약 15초 길이의 폐허 대로 → GrassLands 폐허 던전 *(개정 2026-11-14)* |
+| HUD | 정상적인 소울라이크 HUD: 좌하단 HP 바(오른쪽에 회복약 아이콘 3개 + 개수)·스태미나 바, 하단 중앙 위쪽 보스 이름+체력바. FP 없음 *(개정 2026-11-14)* |
+| 보스 | **「잿빛 왕관의 대주교, 엘베른」** (`BP_FakeBoss_Elbern`, Paragon Narbash ×3 크기, 던전에서 포털로 소환) — 데미지 감쇄 없음, 기본 공격과 구르기만으로 쉽게 처치 |
 | 튜토리얼 | 좌하단에 "정상적인" 조작 안내 팝업: 이동 → 구르기 → 약공격 → 강공격 → 회복약 |
 | 클리어 | 성스러운 빛(`#F2D27A`) + 화면 중앙에 금색 **「DEMON VANQUISHED」** |
 | 원칙 | 이 페이즈에서는 어떤 메타 요소도 보여주지 않습니다 |
@@ -315,30 +319,29 @@ stateDiagram-v2
 |---|---|---|
 | 0.0s | BGM 피치가 카세트테이프 늘어지듯 1.0 → 0.3으로 떨어지며 정지 | `MS_TapeStop` (MetaSound 파라미터 `PitchScale`을 2초간 보간 후 정지) |
 | 2.0s | 클리어 문구가 `DEMON VANQ??$#ED`로 깨짐 | UMG 글리치 애니메이션 |
-| 2.5s | 하늘에 보랏빛 균열(`#8A3FFC`)과 번개, 검은 공허가 열림. 공허 안에 붉게 점멸하는 가상 블루프린트 노드 덩어리가 비침 | 균열 마스크 머티리얼 파라미터 `CrackProgress` 0→1, Niagara 번개, 공허 평면에 직접 제작한 노드 텍스처 |
-| 8.0s | 균열 틈으로 방어 개체 액터들이 쏟아져 내림 | 물리 낙하 후 T-포즈로 기립 |
+| 2.5s | 하늘이 유리처럼 깨지며 하나의 큰 구멍이 열림(불규칙 다각형, 날카로운 파편 가장자리가 떨어져 나감). 구멍 안은 검정 배경의 빽빽한 초록 숫자 디지털 레인, 바깥으로 깜빡이는 번개 균열 *(개정 2026-11-14)* | `M_SkyCrack` 파라미터 `CrackProgress` 0→1, 숫자 아틀라스 `T_DigitAtlas` |
+| 8.0s | 균열 틈으로 방어 개체 액터들이 쏟아져 내림: Infinity Blade Warriors 17종 무작위 40체(0.15초 간격) *(개정 2026-11-14)* | 무작위 관절 포즈로 회전하며 낙하, 착지 시 바로 섬 (`ADefenseEntity`) |
 
 ### 4.3 페이즈 3 — 방어 프로그램의 강림 [확정]
 
-**비주얼 규칙:** 회색 체크무늬 월드 그리드 머티리얼, T-포즈 슬라이딩 이동, 일부 정점이 뻗어 나가는 정점 폭발(Vertex Explosion) 효과.
+**비주얼 규칙:** 낙하 개체는 IB Warriors 원래 머티리얼 + 무작위 포즈 *(개정 2026-11-14)*. 회색 체크무늬 월드 그리드 머티리얼(`M_WorldGrid`)은 방어 개체 레이어의 공용 표식으로 유지(예: E2 로우폴리 박스 몸체).
 
 **로그·대사:** 11.2의 `OP_P3_*` 항목을 순서대로 출력합니다.
 
 ### 4.4 페이즈 4 — 강제 패배 이벤트 [확정]
 
-| 단계 | 연출 | 구현 |
-|---|---|---|
-| ① | 방어 개체 하나가 T-포즈로 미끄러지며 접근 | 루트 모션 없이 위치만 보간 |
-| ② | 상단에 보스 체력바가 생기더니 화면 오른쪽 끝을 뚫고 나가, 줄바꿈되며 화면 상단을 **12줄**까지 채움 | `WBP_BossBar_Overflow`, 0.1초 간격으로 줄 추가 |
-| ③ | 2~3프레임짜리 끊기는 모션으로 무기를 휘두름 | 의도적으로 키 수를 줄인 동작 (애니메이션 에셋이 없으면 트랜스폼 스냅으로 대체) |
-| ④ | 공격 속도 ×999 참격 이펙트가 화면을 덮음 | `NS_SlashX999` (실제 판정은 1개) |
-| ⑤ | 구르기 무적 프레임을 무시하는 `-999,999,999` 즉사 데미지 → **반드시 사망** | `GE_InstantKill` + `Damage.IgnoreIFrame`, 플로팅 텍스트 `-999,999,999` |
+*(개정 2026-11-14)* 원래의 ① T-포즈 접근, ② 화면을 12줄 채우는 오버플로우 체력바(`WBP_BossBar_Overflow`), ③ 끊기는 휘두르기, ④ ×999 참격은 삭제했습니다.
 
-플레이어가 어떤 입력을 해도 약 5초 안에 사망하도록 스크립트로 보장합니다.
+| 시각 | 연출 | 구현 |
+|---|---|---|
+| 1.0s | 낙하한 개체들 사이에서 거대 폭발: 섬광 1회(1.6초 페이드, 12.3 준수), 개체들이 날아감 | IB 폭발 파티클 ×8 스케일, 합성 폭발음 `SW_Explosion`, `ADefenseEntity::BlastAway` |
+| 1.3s | 구르기 무적 프레임을 무시하는 `-999,999,999` 즉사 데미지 → **반드시 사망** | `GE_InstantKill` + `Damage.IgnoreIFrame`, 플로팅 텍스트 `-999,999,999` |
+
+플레이어가 어떤 입력을 해도 반드시 사망하도록 스크립트로 보장합니다.
 
 ### 4.5 페이즈 5 — 제4의 벽 돌파 (오류창 기믹) [확정]
 
-**① 사망 화면:** 화면 중앙에 붉은 사망 문구 **`Player = None`** 출력 후 정지.
+**① 사망 화면:** 화면 중앙에 붉은 사망 문구 **`Player = None`** 출력 후 정지. 게임풍 연출: 암전 → 붉은 띠가 펼쳐짐 → 문구가 줌인되며 색수차 글리치 → 엔진 에러 한 줄 타이핑(`UI_DEATH_SUB`) (`WBP_DeathScreen`) *(개정 2026-11-14)*. 이 화면은 오프닝 전용이며, 이후 게임플레이 사망은 6.2의 `YOU DIED` 화면을 씁니다.
 
 **② 디버거 첫 등장:** 화면 구석에 디버거 터미널(`#3DDC97`)이 타이핑됩니다 (`OP_P5_DBG_01`).
 
@@ -365,7 +368,7 @@ stateDiagram-v2
 | 조작 방식 | 드래그 & 드롭 **또는** 클릭-클릭(첫 클릭으로 집고 두 번째 클릭으로 놓기) |
 | 리셋 규칙 | 드래그(또는 집기)를 시작하는 **즉시 카운터가 멈추고 분자가 `1`로 강제 리셋** |
 | 정답 | 두 숫자의 위치를 맞바꿈 → 정확히 **`99999999 / 1`** |
-| 결과 | 진행률 바가 창 밖으로 폭발 → `진행률 9,999,999,900%... 치명적 오버플로우 발생!` 경고창 연속 팝업 → 플레이어가 스테이지 1로 강제 리스폰 (`L_Stage1_DarkGrove`) |
+| 결과 | 진행률 바가 창 밖으로 폭발 → `진행률 9,999,999,900%... 치명적 오버플로우 발생!` 경고창 28개 연속 팝업(4초 안, 0.1초 간격 *(개정 2026-11-14)*) → 플레이어가 스테이지 1로 강제 리스폰 (`L_Stage1_DarkGrove`) |
 | 오답 | 창 밖으로 드롭하거나 같은 자리에 놓으면 원래 위치로 스냅백. 카운터는 다시 진행 |
 | 막혔을 때 | 정답 없이 30초 경과 → `OP_P5_DBG_HINT_30`, 60초 경과 → `OP_P5_DBG_HINT_60` |
 
@@ -377,14 +380,16 @@ stateDiagram-v2
 
 | ID | 이름 | 분류 | 레벨 | 조작 대상 | 진입 시 리셋값 | 파훼 조건 | 클리어 후 복구 |
 |---|---|---|---|---|---|---|---|
-| E1 | 어둠 속의 암살자 | 첫 번째 잡몹 | `L_Stage1_DarkGrove` | 그래픽 › 밝기 | Gamma = 0.20 | Gamma **≥ 0.95** | 2초에 걸쳐 0.50으로 |
-| E2 | 가시 갑옷의 기사 | 첫 번째 보스 | `L_Stage1_DarkGrove` | 그래픽 › 모델링 품질 | MeshQuality = 3 | MeshQuality **= 0** | 플레이어가 직접 바꿀 때까지 유지 [기본값] |
+| E1 | 어둠 속의 암살자 (3체) | 첫 번째 잡몹 | `L_Stage1_DarkGrove` | 그래픽 › 밝기 | Gamma = 0.20 | Gamma **≥ 0.95** 후 3체와 근접전 | 마지막 1체 처치 후 2초에 걸쳐 0.50으로 |
+| E2 | 가시 갑옷의 기사 | 첫 번째 보스 | `L_Stage1_DarkGrove` | 품질 › 모델링 품질 | MeshQuality = 3 | MeshQuality **= 0** | 플레이어가 직접 바꿀 때까지 유지 [기본값] |
 | E3 | 침묵하는 거상 | 이벤트 | `L_Stage2_StatueGate` | 대화창 이름표 | – | 이름표 맞바꿈 후 대화 종료 | – (빙의는 영구) |
 | E4 | 공명하는 쌍둥이 심판자 | 두 번째 보스 | `L_Stage2_StatueGate` | 오디오 › 스테레오 밸런스 | StereoBalance = 0.0 | StereoBalance **≥ +0.95** | 처치 3초 후 0.0으로 |
 | E5 | 해상도 압착 — 탄막 군단 | 두 번째 잡몹 | `L_Stage3_Arena169` | 그래픽 › 화면 비율 | AspectRatio = 0 (16:9) | AspectRatio **= 1 (4:3)** | 16:9 복구 + 맵 내부 텔레포트 |
 | E6 | 마스터 코드 / 시스템 코어 | 최종 보스 | `L_Final_EngineCore` | 가상 개발자 콘솔 | 메뉴 잠금 | `set gravity 9999` **AND** `slomo 0.05` | 엔딩 |
 
-진입 시 리셋이 일어나면 디버거 터미널에 `SYS_SETTING_OVERRIDE` 로그를 출력합니다 (예: `[SYSTEM] BP_Assassin_C 가 설정을 덮어썼습니다: Gamma 95% → 20%`).
+진입 시 리셋이 일어나면 디버거 터미널에 `SYS_SETTING_OVERRIDE` 로그를 출력합니다 (예: `[SYSTEM] BP_Assassin_C 가 설정을 덮어썼습니다: Gamma 95% → 20%`). 값이 실제로 바뀌지 않았으면 출력하지 않습니다(여러 개체가 같은 값을 강제할 때 중복 방지). 클리어 대사·설정 복구는 인카운터의 마지막 개체가 쓰러질 때 1회 실행합니다.
+
+**스테이지 1 레이아웃 (`L_Stage1_DarkGrove`)** *(개정 2026-11-15)*: InfinityBladeIceLands 에셋으로 구성한 눈 덮인 밤. 야영지(시작, 브레이크포인트 1) → 룬 비석 관문(`E1_STELE`) → 얼어붙은 고목 숲(E1, x≈37m) → 절벽 협로(얼음 연못·석상·화로, 브레이크포인트 2, 로우폴리 박스 파편) → 벽 없는 얼음 요새 광장(E2, 중심 x≈135m, 반경 27m). E1과 E2 사이는 약 98m.
 
 ---
 
@@ -392,24 +397,25 @@ stateDiagram-v2
 
 | 항목 | 내용 |
 |---|---|
-| 불합리 | 암흑 숲. 암살자가 `State.Invulnerable` + 투명 디더 마스킹 은신(`Gimmick.Stealth`) 상태로 예고 없는 즉사 기습을 가함 |
+| 불합리 | 암흑 숲. 암살자 **3체**가 `State.Invulnerable` + 은신(`Gimmick.Stealth`) 상태로 예고 없는 즉사 기습을 가함 *(개정 2026-11-15)* |
 | 단서 | 입구 비석 `E1_STELE` / 암살자의 눈만 가끔 반짝임 / 화면에 색 띠(밴딩)가 보이는 비정상 감마 커브 |
 | 힌트 | 11.4의 `HINT_E1_*` |
 | 파훼 | `ESC › 설정 › 그래픽 › 밝기(Gamma)` **≥ 95%** |
-| 전환 | 0.8초에 걸쳐 화면이 화이트아웃 수준으로 밝아짐 → 숨어 있던 모델이 드러나며 은신·무적 해제 → 6초 눈부심 스턴(`GE_Stun`) |
-| 약점화 | HP `D × 3` (약공격 3회 처치) |
-| 복구 | 처치 후 감마가 2초에 걸쳐 기본값 50%로 자동 복구, 디버거 `E1_CLEAR` 출력 |
+| 전환 | 0.8초에 걸쳐 화면이 화이트아웃 수준으로 밝아짐 → 숨어 있던 모델이 드러나며 은신·무적 해제 → 1초 눈부심(`GE_Stun`) 후 바로 반격 *(개정 2026-11-15, 원래 6초 스턴)* |
+| 약점화 | 각 HP `D × 3` (약공격 3회). 드러난 3체가 일반 공격(600)으로 반격하므로 근접전으로 해결 *(개정 2026-11-15)* |
+| 복구 | 마지막 1체 처치 후 감마가 2초에 걸쳐 기본값 50%로 자동 복구, 디버거 `E1_CLEAR` 1회 출력 |
 
 ### E2. 가시 갑옷의 기사 (첫 번째 보스)
 
 | 항목 | 내용 |
 |---|---|
-| 불합리 | 초고밀도 하이폴리곤 가시 갑옷. 등장 시 디버그 텍스트 `Triangles: 48,000,000` 표시. 타격 시 원시 데미지의 **300% 반사**(`GE_Boss_Reflect`) + **99% 데미지 감쇄** |
+| 불합리 | 초고밀도 하이폴리곤 가시 갑옷. 등장 시 디버그 텍스트 `Triangles: 48,000,000` 표시. 어그로 18m 안에 들어오면 **1800cm/s로 돌진**, 모든 공격 **1100**(기사 일격사). 타격당하면 **가시 폭발 반격 99,999**(즉사) + **99% 데미지 감쇄** *(개정 2026-11-15, 원래 300% 반사 `GE_Boss_Reflect`)* |
+| 전투 공간 | 벽 없는 넓은 광장(반경 27m), 테두리는 화로·기둥 장식뿐 *(개정 2026-11-15)* |
 | 단서 | 보스방 앞에 굴러다니는 같은 기사의 로우폴리 파편들 / 등장 시 프레임이 떨어지는 듯한 연출 |
 | 힌트 | `HINT_E2_*` |
 | 파훼 | `ESC › 설정 › 그래픽 › 모델링 품질` = **최하(0)** |
-| 전환 | 0.6초 디졸브와 함께 메시가 `SK_ThornKnight_Low`로 교체, 가시 히트박스(`Spike_Hitbox_*`) 콜리전 전부 비활성화 |
-| 약점화 | 반사 0, 감쇄 0% → 약공격 10회에 처치 |
+| 전환 | 가시가 0.6초에 걸쳐 줄어들며 사라지고, 그 자리에 회색 체크무늬 **큰 박스 여러 개로 된 기사**가 자라남(`SK_ThornKnight_Low` 역할, 뼈에 부착되어 원래 애니메이션대로 움직임). 가시 히트박스(`Spike_Hitbox_*`) 콜리전 전부 비활성화 *(개정 2026-11-15)* |
+| 약점화 | 가시 반격 없음, 기본 이동 속도, 공격 600, 감쇄 0% → 약공격 10회에 처치 |
 
 ### E3. 침묵하는 거상 (이벤트 인카운터)
 
@@ -472,10 +478,12 @@ stateDiagram-v2
 
 정답 항목이 너무 눈에 띄지 않도록, **정상적으로 동작하는 일반 항목**을 함께 둡니다.
 
+*(개정 2026-11-15)* 설정창은 7탭(게임플레이 · 그래픽 · 품질 · 오디오 · 조작 · 키 설정 · 접근성), 약 85행입니다. 아래 표의 8개(기믹 4 + 일반 4)만 실제로 동작하고, 나머지는 **미끼 항목**입니다(화면 모드, 해상도, 텍스처·그림자·캐릭터 디테일 품질, 볼륨 세부, 색각 보정 등). 미끼 값은 세션 동안 기억만 하고 실제 시스템에는 절대 적용하지 않습니다(0.2-5). 키 설정은 버튼을 누르고 키를 입력하면 표시만 바뀝니다(실제 매핑 불변, ESC = 취소). 하단 버튼: `기본값 복원`(미끼 + 위 8개를 기본값으로) · `메인 메뉴` · `게임 종료` · `닫기`. 행 목록의 원본은 `UMetaSettingsWidget::RebuildWidget`, 문구는 `create_string_table.py`의 `SET_*` 키입니다.
+
 | 탭 | 항목 | 형식 | 범위 / 선택지 | 기본값 | 기믹 연동 |
 |---|---|---|---|---|---|
 | 그래픽 | 밝기(Gamma) | 슬라이더 (1% 단위) | 0~100% | 50% | E1 |
-| 그래픽 | 모델링 품질 | 드롭다운 | 최하(0) / 낮음(1) / 보통(2) / 최상(3) | 최상(3) | E2 |
+| 품질 | 모델링 품질 | 드롭다운 | 최하(0) / 낮음(1) / 보통(2) / 최상(3) | 최상(3) | E2 |
 | 그래픽 | 화면 비율 | 드롭다운 | 16:9(0) / 4:3(1) | 16:9 | E5 |
 | 그래픽 | 모션 블러 | 토글 | 켜기 / 끄기 | 끄기 | 일반 항목 |
 | 오디오 | 마스터 볼륨 | 슬라이더 | 0~100% | 80% | 일반 항목 |
@@ -491,7 +499,7 @@ stateDiagram-v2
 
 - 각 인카운터 입구에 붉은 디버그 중단점 구 형태의 오브젝트(`ABreakpointActor`)를 배치합니다.
 - `E` 상호작용 시 HP·회복약 완전 회복 + `UMetaSaveGame` 저장.
-- 사망 시 마지막 브레이크포인트에서 **3초 이내** 즉시 리스폰 (레벨 재로드 없이 액터 리셋 방식 권장).
+- 사망 시 **`YOU DIED`** 화면(`WBP_YouDied`): 화면은 거의 투명하게, 부드러운 검은 띠 위에 붉은 `YOU DIED`, 잠시 뒤 하단에 `다시하기` / `메인 메뉴로` 버튼. `다시하기`는 마지막 브레이크포인트(없으면 레벨 시작 지점)에서 즉시 부활(레벨 재로드 없이 액터 리셋), `메인 메뉴로`는 `L_Title` *(개정 2026-11-15, 원래 3초 이내 자동 리스폰)*.
 - 인카운터 진행 중에는 저장하지 않습니다.
 
 ### 6.3 사망 횟수 기반 힌트 (`UHintSubsystem`) [확정]
@@ -508,7 +516,7 @@ stateDiagram-v2
 
 ### 6.4 타이틀 화면 (`L_Title`) [기본값]
 
-최소 구성: `새 게임` / `이어하기`(저장 데이터가 있을 때만) / `종료`. 실제 해상도·창 모드 설정 메뉴는 이 프로젝트 범위에 포함하지 않으며, 기본값(전체화면, 데스크톱 해상도)으로 실행합니다.
+최소 구성: `새 게임` / `이어하기`(저장 데이터가 있을 때만) / `종료`. 배경은 달밤 폐허 3D 장면(`TitleCamera`), 자간 넓힌 금색 제목, 하단 어두운 띠 위 텍스트 메뉴, 타이틀 BGM *(개정 2026-11-14)*. 실제 해상도·창 모드 설정 메뉴는 이 프로젝트 범위에 포함하지 않으며, 기본값(전체화면, 데스크톱 해상도)으로 실행합니다.
 
 ---
 
@@ -638,7 +646,7 @@ AccessedNone/
 
 ### 7.5 플레이스홀더 에셋 정책
 
-아트 에셋이 없어도 모든 Stage가 진행되어야 합니다.
+아트 에셋이 없어도 모든 Stage가 진행되어야 합니다. *(현황 2026-11-15)* 실제로는 프로젝트에 추가된 마켓 에셋을 씁니다: 플레이어·보스 = Paragon 캐릭터(애니메이션 포함), 낙하 방어 개체 = Infinity Blade Warriors, 지형 = Infinity Blade GrassLands(오프닝)·IceLands(스테이지 1), 이펙트 = Paragon·Infinity Blade Effects. 아래 표는 에셋이 없을 때의 대체 규칙입니다.
 
 | 필요 | 플레이스홀더 |
 |---|---|
@@ -666,7 +674,7 @@ public:
     UPROPERTY(Config, EditAnywhere, Category="Combat") float BossHPMultiplier = 10.f;
     UPROPERTY(Config, EditAnywhere, Category="Combat") float MinionHPMultiplier = 3.f;
     UPROPERTY(Config, EditAnywhere, Category="Combat") float ArmoredDamageReduction = 0.99f;
-    UPROPERTY(Config, EditAnywhere, Category="Combat") float HeavyMotionValue = 1.5f;
+    UPROPERTY(Config, EditAnywhere, Category="Combat") float HeavyMotionValue = 2.0f; // 개정 2026-11-14
     UPROPERTY(Config, EditAnywhere, Category="Combat") float DodgeIFrameSeconds = 0.3f;
     // 2.2 시간 배율
     UPROPERTY(Config, EditAnywhere, Category="Time") float EncounterMenuTimeDilation = 0.15f;
@@ -803,7 +811,7 @@ IncomingDamage (메타 어트리뷰트, 복제 안 함)
 |---|---|---|
 | `GE_Boss_Armored` | Infinite | DamageReduction = 0.99, 태그 `State.Armored` |
 | `GE_Boss_Invulnerable` | Infinite | 태그 `State.Invulnerable` |
-| `GE_Boss_Reflect` | Infinite | ReflectRatio = 3.0, 태그 `Gimmick.Reflect` |
+| `GE_Boss_Reflect` | Infinite | ReflectRatio = 3.0, 태그 `Gimmick.Reflect` (현재 사용하는 보스 없음 — E2는 가시 반격으로 대체, *개정 2026-11-15*) |
 | `GE_Boss_Vulnerable` | Infinite | DamageReduction = 0.0, 태그 `State.Vulnerable` |
 | `GE_Stun` | Duration (SetByCaller `Data.Duration`) | 태그 `State.Stunned` |
 | `GE_IFrame` | Duration 0.3초 | 태그 `State.IFrame` |
@@ -992,7 +1000,11 @@ HBox_Buttons (Btn_Retry / Btn_Title / Btn_OK) → 흔들림 + "권한 없음" �
 - 큐 방식: 여러 메시지가 들어오면 순서대로 출력.
 - `PlaySacrificeAndHide()` — E6 소멸 연출 후 영구 숨김 (`UMetaSaveGame::bDebuggerGone = true`).
 
-**`WBP_BossBar_Overflow`** — 바 너비를 늘리다가 뷰포트 오른쪽 끝에 닿으면 다음 줄에 바를 복제해 왼쪽에서 다시 시작. 0.1초 간격, 최대 12줄.
+~~**`WBP_BossBar_Overflow`**~~ — 삭제 *(개정 2026-11-14, 4.4 참조)*.
+
+**`WBP_YouDied`** (부모 `UMetaYouDiedWidget`) — 게임플레이 사망 화면(6.2). 실시간 기준 페이드, 버튼은 1.6초 뒤 표시. `다시하기` → `AMetaGameMode::RequestRespawn`.
+
+**`WBP_Settings`** (부모 `UMetaSettingsWidget`) — 6.1. 탭별 스크롤 페이지, 사망 8회 시 정답 행 붉게 점멸.
 
 ### 8.9 표현 레이어
 
@@ -1086,8 +1098,8 @@ Event.Hit.Immune
 |---|---|---|---|
 | `IA_Move` | Axis2D | WASD (`IMC_Gameplay`) | Swizzle / Negate 모디파이어 |
 | `IA_Look` | Axis2D | Mouse XY | 감도 모디파이어 (가상 설정 연동) |
-| `IA_Dodge` | Bool | Space | **Tap** (임계 0.2초) |
-| `IA_Dash` | Bool | Space | **Hold** (임계 0.2초) |
+| `IA_Dodge` | Bool | Space | Pressed *(개정 2026-11-14)* |
+| `IA_Dash` | Bool | (매핑 없음 — 대시 삭제, 에셋만 유지) | – |
 | `IA_Jump` | Bool | F | Pressed |
 | `IA_LockOn` | Bool | Middle Mouse Button | Pressed |
 | `IA_ModifierShift` | Bool | Left Shift | Down |
@@ -1120,6 +1132,11 @@ Event.Hit.Immune
 | `UI_NO_PERMISSION` | 권한 없음 |
 | `SYS_SETTING_OVERRIDE` | [SYSTEM] {Boss} 가 설정을 덮어썼습니다: {Setting} {Old} → {New} |
 | `UI_BREAKPOINT_SAVE` | 브레이크포인트 설정됨 |
+| `UI_YOU_DIED` | YOU DIED |
+| `UI_RETRY` | 다시하기 |
+| `UI_TO_MAIN_MENU` | 메인 메뉴로 |
+
+이 장 밖의 UI 문구(설정창 `SET_*`, 타이틀 `TITLE_*`, 프롬프트 등)는 `Scripts/Editor/create_string_table.py`가 원본입니다.
 
 ### 11.2 오프닝
 
@@ -1260,7 +1277,7 @@ E3은 대화를 3회 반복하면 단서(이름표 깜빡임)가 나오므로 �
 | 인카운터 전에 미리 정답 설정을 해둠 | 진입 시 보스가 관련 설정을 강제 리셋 (`SYS_SETTING_OVERRIDE` 출력) |
 | 약점화 후 설정을 원래대로 되돌림 | `bLatchOnceBroken = true` → 이번 트라이 동안 Vulnerable 유지 |
 | `Breaking` 중 설정을 되돌림 | 무시하고 `Vulnerable`로 진행 |
-| 보스전 중 사망 | 인카운터 `Dormant`로 리셋, 사망 횟수 +1, 3초 내 리스폰. 재진입 시 다시 강제 리셋 |
+| 보스전 중 사망 | 인카운터 `Dormant`로 리셋, 사망 횟수 +1, `YOU DIED` → `다시하기`로 즉시 리스폰 *(개정 2026-11-15)*. 재진입 시 다시 강제 리셋 |
 | E5 레터박스 안에 있는 상태에서 16:9로 복구 | 맵 내부 가장 가까운 지점으로 텔레포트 |
 | `slomo` 입력값 범위 밖 | `0.01 ~ 1.0`으로 클램프하고 클램프된 값을 출력 |
 | `set gravity` 음수 또는 0 | `CON_GRAVITY_REJECT` |
@@ -1313,7 +1330,7 @@ E3은 대화를 3회 반복하면 단서(이름표 깜빡임)가 나오므로 �
 | `AccessedNone.Combat.Invulnerable` | 무적이면 0 + Immune 이벤트 |
 | `AccessedNone.Combat.Reflect` | Raw 100 → 공격자에게 300, 반사는 재반사되지 않음 |
 | `AccessedNone.Combat.IFrame` | i-frame 중 일반 공격 0, `IgnoreIFrame` 공격은 적용 |
-| `AccessedNone.Combat.HitsToKill` | Vulnerable 보스(HP = D×10)를 약공격 10회에 처치, 강공격 7회 |
+| `AccessedNone.Combat.HitsToKill` | Vulnerable 보스(HP = D×10)를 약공격 10회에 처치, 강공격 5회 *(개정 2026-11-14)* |
 | `AccessedNone.Gimmick.StateMachine` | Dormant→Armored→Breaking→Vulnerable→Defeated 전이, Latch 동작, Reset |
 | `AccessedNone.Console.Parser` | 13장의 모든 콘솔 케이스 (대소문자, 공백, 클램프, 음수, 오타 추천) |
 
@@ -1330,7 +1347,7 @@ E3은 대화를 3회 반복하면 단서(이름표 깜빡임)가 나오므로 �
 | S2-T03 | 가상 설정창 | `WBP_Settings` (6.1 전체 항목, 탭 구조, 사망 8회 점멸 기능), `AMetaPostProcessController`의 Gamma 처리 |
 | S2-T04 | 디버거 터미널 | `WBP_Debugger` (큐, 타자기, 실시간 기준) |
 | S2-T05 | 오류창 | `WBP_ErrorWindow`, `UMetaDraggableNumberWidget`, `UMetaNumberDragOperation`, 클릭-클릭 모드 |
-| S2-T06 | 오버플로우 체력바 | `WBP_BossBar_Overflow` |
+| S2-T06 | ~~오버플로우 체력바~~ | 삭제 *(개정 2026-11-14)* |
 | S2-T07 | 타이틀 | `L_Title` (6.4) |
 | S2-T08 | 페이즈 1 | `L_Prologue_FlowerField`, `BP_FakeBoss_Elbern`, 튜토리얼 팝업, `DEMON VANQUISHED` |
 | S2-T09 | 페이즈 2~4 | `MS_TapeStop`, 하늘 균열 머티리얼, `NS_SkyCrack`, 방어 개체 낙하·T-포즈, 로그 출력, `NS_SlashX999`, 강제 패배 |
@@ -1352,10 +1369,10 @@ E3은 대화를 3회 반복하면 단서(이름표 깜빡임)가 나오므로 �
 
 | ID | 작업 | 산출물 |
 |---|---|---|
-| S3-T01 | 브레이크포인트 | `ABreakpointActor`, 저장, 3초 리스폰, 사망 횟수별 힌트 연동 |
-| S3-T02 | 레벨 | `L_Stage1_DarkGrove` (어두운 숲, E1 구역, E2 보스방, 브레이크포인트 2개) |
-| S3-T03 | E1 | `BP_Assassin`, `DA_Boss_Assassin`, `DA_Hint_E1`, 은신 디더 머티리얼, 감마 20% 리셋, 화이트아웃 0.8초, 6초 스턴, 2초 감마 복구 |
-| S3-T04 | E2 | `BP_ThornKnight`, `SK_ThornKnight_High/Low`(플레이스홀더), `Spike_Hitbox_*`, `DA_Boss_ThornKnight`, `DA_Hint_E2`, 메시 품질 3 리셋, 0.6초 디졸브 교체 |
+| S3-T01 | 브레이크포인트 | `ABreakpointActor`, 저장, `YOU DIED` → `다시하기` 리스폰 *(개정 2026-11-15)*, 사망 횟수별 힌트 연동 |
+| S3-T02 | 레벨 | `L_Stage1_DarkGrove` (IceLands 눈 덮인 밤: 야영지, 고목 숲 E1, 절벽 협로, 벽 없는 광장 E2, 브레이크포인트 2개 *(개정 2026-11-15)*) |
+| S3-T03 | E1 | `BP_Assassin`, `DA_Boss_Assassin`, `DA_Hint_E1`, 은신 디더 머티리얼, 감마 20% 리셋, 화이트아웃 0.8초, 암살자 3체·1초 눈부심 후 근접전 *(개정 2026-11-15)*, 2초 감마 복구 |
+| S3-T04 | E2 | `BP_ThornKnight`, `SK_ThornKnight_High/Low`(플레이스홀더), `Spike_Hitbox_*`, `DA_Boss_ThornKnight`, `DA_Hint_E2`, 메시 품질 3 리셋, 돌진·일격사·가시 반격, 0.6초 가시 소멸 + 박스 몸체 교체 *(개정 2026-11-15)* |
 
 **자동화 테스트**
 
