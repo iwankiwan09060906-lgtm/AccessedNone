@@ -83,9 +83,11 @@ assassin_class = boss_bp("/Game/Characters/Bosses/Assassin", "BP_Assassin", "Ass
 GX = hero("Grux", "Animations/")
 da2 = data_asset(GIM, "DA_Boss_ThornKnight", "BossDataAsset")
 for k, v in dict(display_name_key="E2_NAME", debug_name="BP_ThornKnight_C", is_minion=False, hp_multiplier_override=0.0,
-                 armored_effects=[cls("GE_Boss_Armored"), cls("GE_Boss_Reflect")],
-                 pattern_set_armored=[pattern("SwingL", 280.0, 0.9, 0.2, 1.1, 2.4, normal, 2.0, GX + "PrimaryAttack_LA_Montage"),
-                                      pattern("SwingR", 280.0, 0.9, 0.2, 1.1, 2.8, normal, 1.5, GX + "PrimaryAttack_RA_Montage"),
+                 # Armored (user revision): charges at 1800 cm/s, every swing one-shots the knight (1100 > 1000 HP), and any hit on
+                 # it fires a lethal thorn burst (AThornKnightBoss) in place of the 300 % reflect.
+                 armored_effects=[cls("GE_Boss_Armored")], armored_move_speed=1800.0, vulnerable_move_speed=0.0,
+                 pattern_set_armored=[pattern("SwingL", 280.0, 0.9, 0.2, 1.1, 2.4, heavy, 2.0, GX + "PrimaryAttack_LA_Montage"),
+                                      pattern("SwingR", 280.0, 0.9, 0.2, 1.1, 2.8, heavy, 1.5, GX + "PrimaryAttack_RA_Montage"),
                                       pattern("FourStrikes", 320.0, 1.4, 0.3, 1.5, 6.0, heavy, 1.0, GX + "PrimaryAttack_FourStrikes_Montage")],
                  pattern_set_vulnerable=[pattern("SwingL", 280.0, 1.1, 0.2, 1.8, 3.0, normal, 1.0, GX + "PrimaryAttack_LA_Montage")],
                  mesh=unreal.load_asset(hero("Grux", "Meshes/Grux")),

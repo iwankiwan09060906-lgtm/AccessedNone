@@ -52,6 +52,7 @@ void AMetaBossBase::BeginPlay()
 	}
 	Super::BeginPlay(); // after the mesh swap: base BeginPlay suppresses the new anim instance's intro montage
 	SpawnTransform = GetActorTransform();
+	DefaultWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
 	Gimmick->OnStateChanged.AddDynamic(this, &AMetaBossBase::HandleGimmickStateChanged);
 }
 
@@ -98,6 +99,7 @@ void AMetaBossBase::HandleGimmickStateChanged(EGimmickState Old, EGimmickState N
 			}
 		}
 		Patterns->SetPatternSet(BossData ? BossData->PatternSet_Armored : TArray<FBossPattern>());
+		ApplyMoveSpeed(BossData ? BossData->ArmoredMoveSpeed : 0.f);
 		if (!IsDummy())
 		{
 			Patterns->Start(EncounterTarget.Get());
@@ -121,6 +123,7 @@ void AMetaBossBase::HandleGimmickStateChanged(EGimmickState Old, EGimmickState N
 		AbilitySystem->ApplyGameplayEffectToSelf(UGE_Boss_Vulnerable::StaticClass()->GetDefaultObject<UGameplayEffect>(), 1.f, AbilitySystem->MakeEffectContext());
 		AbilitySystem->RemoveLooseGameplayTag(MetaTags::State_Breaking);
 		Patterns->SetPatternSet(BossData ? BossData->PatternSet_Vulnerable : TArray<FBossPattern>());
+		ApplyMoveSpeed(BossData ? BossData->VulnerableMoveSpeed : 0.f);
 		if (!IsDummy())
 		{
 			Patterns->Resume();
@@ -152,9 +155,15 @@ void AMetaBossBase::HandleGimmickStateChanged(EGimmickState Old, EGimmickState N
 		AbilitySystem->SetLooseGameplayTagCount(MetaTags::State_Breaking, 0);
 		SetActorTransform(SpawnTransform, false, nullptr, ETeleportType::ResetPhysics);
 		GetCharacterMovement()->SetMovementMode(GetCharacterMovement()->DefaultLandMovementMode);
+		ApplyMoveSpeed(0.f);
 		AbilitySystem->SetNumericAttributeBase(UMetaCombatAttributeSet::GetHealthAttribute(), Attributes->GetMaxHealth());
 		break;
 	}
+}
+
+void AMetaBossBase::ApplyMoveSpeed(float Speed)
+{
+	GetCharacterMovement()->MaxWalkSpeed = Speed > 0.f ? Speed : DefaultWalkSpeed;
 }
 
 void AMetaBossBase::RemoveStateEffects()

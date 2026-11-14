@@ -62,6 +62,8 @@
 
 **Stage 3 개정 1 (사용자 지시, 2026-11-15):** `L_Stage1_DarkGrove` IceLands 재구성(야영지 → 룬 비석 → 얼음 고목 숲 → 절벽 협로 → 열린 얼음 요새 광장, 눈·안개·불 파티클), E1↔E2 거리 2배, E1 암살자 3체 + 짧은 눈부심 후 반격(근접전으로 해결), E2 벽 없는 넓은 광장 + 품질 0 시 박스 몸체 기사, 설정창 7탭 ≈85행(미끼) + 키 설정·기본값 복원·메인 메뉴·게임 종료. 빌드 경고 0, 에디터 15/15, 게임 `Stage1.Encounters`·`Stage1.Tour`·`Sandbox.BossFlow/Roll/Camera`·`Flow.Continue` 통과(`Sandbox.Camera`는 BossFlow 뒤 같은 세션에서 돌리면 실패 — 기존 순서 의존, 단독 통과). 스크린샷 확인. **손 조작 확인 대기: 키 설정 클릭→키 입력, 메인 메뉴/게임 종료 버튼, 3체 근접전 난이도**
 
+**Stage 3 개정 2 (사용자 지시, 2026-11-15):** E2 Armored 1800cm/s 돌진 + 일격사(1100) + 타격 시 가시 반격 즉사(300% 반사 대체), 약점화 후 기본 속도·가시 없음. 사망 화면 `WBP_YouDied`(YOU DIED + 다시하기/메인 메뉴로, 자동 부활 제거). 빌드 경고 0, 에디터 15/15, 게임 `Stage1.Encounters`(사망 8회 모두 다시하기 경유)·`Stage1.Tour`(YOU DIED 스크린샷)·`Sandbox.BossFlow/Roll`·`Flow.Continue` 통과. **손 조작 확인 대기: 돌진 회피 난이도, 다시하기/메인 메뉴로 클릭**
+
 ## Stage 4~6
 
 TODO

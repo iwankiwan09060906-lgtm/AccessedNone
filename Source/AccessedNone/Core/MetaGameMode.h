@@ -16,8 +16,11 @@ public:
 	/** Continue: the first spawn goes to the saved breakpoint. */
 	virtual void RestartPlayer(AController* NewPlayer) override;
 
-	/** Player died: death screen, then respawn at the active breakpoint within RespawnMaxSeconds (spec 6.2). */
+	/** Player died: YOU DIED screen; "다시하기" respawns at the active breakpoint, "메인 메뉴로" goes to the title. */
 	void HandlePlayerDeath(class AMetaPlayerCharacter* Player);
+	/** "다시하기" (tests call it directly). Respawns at once, no level reload (spec 6.2). */
+	UFUNCTION(BlueprintCallable, Category="Respawn") void RequestRespawn();
+	class UUserWidget* GetDeathScreen() const { return DeathScreen; }
 	void SetActiveBreakpoint(class ABreakpointActor* Breakpoint) { ActiveBreakpoint = Breakpoint; }
 	class ABreakpointActor* GetActiveBreakpoint() const { return ActiveBreakpoint; }
 
@@ -25,10 +28,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Respawn") bool bRespawnEnabled = true;
 
 private:
-	void Respawn(TWeakObjectPtr<class AMetaPlayerCharacter> Player);
 
 	UPROPERTY() TObjectPtr<class ABreakpointActor> ActiveBreakpoint;
 	UPROPERTY() TObjectPtr<class UUserWidget> DeathScreen;
 	FTransform StartTransform;
-	FTimerHandle RespawnTimer;
+	TWeakObjectPtr<class AMetaPlayerCharacter> DeadPlayer;
 };

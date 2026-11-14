@@ -1,5 +1,11 @@
 #include "Characters/ThornKnightBoss.h"
 #include "Core/MetaText.h"
+#include "Core/AccessedNoneSettings.h"
+#include "Core/MetaGameplayTags.h"
+#include "Combat/MetaCombatAttributeSet.h"
+#include "Combat/MetaGameplayEffects.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemGlobals.h"
 #include "Gimmick/GimmickCondition.h"
 #include "UI/MetaUI.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -106,6 +112,33 @@ void AThornKnightBoss::BeginPlay()
 	}
 	BuildBlockBody();
 	SetHighPoly();
+	DamageHandle = FMetaCombatEvents::OnDamage.AddUObject(this, &AThornKnightBoss::HandleAnyDamage);
+}
+
+void AThornKnightBoss::EndPlay(const EEndPlayReason::Type Reason)
+{
+	FMetaCombatEvents::OnDamage.Remove(DamageHandle);
+	Super::EndPlay(Reason);
+}
+
+void AThornKnightBoss::HandleAnyDamage(AActor* Target, float Damage, bool bImmune)
+{
+	// Only the player ever hits a boss; the thorns answer every hit while the armor is up.
+	APawn* Player = UGameplayStatics::GetPlayerPawn(this, 0);
+	if (Target != this || bLowPoly || IsDead() || !Player || Gimmick->GetState() != EGimmickState::Armored)
+	{
+		return;
+	}
+	UAbilitySystemComponent* PlayerASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Player);
+	if (!PlayerASC)
+	{
+		return;
+	}
+	++ThornStrikes;
+	ThornBurstLeft = ThornBurstSeconds;
+	const FGameplayEffectSpecHandle Spec = AbilitySystem->MakeOutgoingSpec(UGE_InstantKill::StaticClass(), 1.f, AbilitySystem->MakeEffectContext());
+	Spec.Data->SetSetByCallerMagnitude(MetaTags::Data_FixedDamage, UAccessedNoneSettings::Get().BossSkillDamage);
+	AbilitySystem->ApplyGameplayEffectSpecToTarget(*Spec.Data, PlayerASC);
 }
 
 void AThornKnightBoss::SetHighPoly()
@@ -245,6 +278,16 @@ void AThornKnightBoss::Tick(float DeltaSeconds)
 		if (Alpha >= 1.f)
 		{
 			FinishLowPoly();
+		}
+	}
+	if (ThornBurstLeft > 0.f && DissolveElapsed < 0.f && !bLowPoly)
+	{
+		// Thorn burst: the spikes shoot out and snap back.
+		ThornBurstLeft = FMath::Max(0.f, ThornBurstLeft - DeltaSeconds);
+		const float Pulse = FMath::Sin(UE_PI * (1.f - ThornBurstLeft / ThornBurstSeconds));
+		for (int32 i = 0; i < Spikes.Num() && i < SpikeScales.Num(); ++i)
+		{
+			Spikes[i]->SetRelativeScale3D(SpikeScales[i] * FVector(1.f, 1.f, 1.f + (ThornBurstScale - 1.f) * Pulse));
 		}
 	}
 	if (TrisText->IsVisible())

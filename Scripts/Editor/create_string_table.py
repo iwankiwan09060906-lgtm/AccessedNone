@@ -17,6 +17,9 @@ ENTRIES = [
     ("UI_NO_PERMISSION", "권한 없음"),
     ("SYS_SETTING_OVERRIDE", "[SYSTEM] {Boss} 가 설정을 덮어썼습니다: {Setting} {Old} → {New}"),
     ("UI_BREAKPOINT_SAVE", "브레이크포인트 설정됨"),
+    ("UI_YOU_DIED", "YOU DIED"),
+    ("UI_RETRY", "다시하기"),
+    ("UI_TO_MAIN_MENU", "메인 메뉴로"),
     ("UI_BREAKPOINT_PROMPT", "[E] 브레이크포인트"),
     ("UI_READ_PROMPT", "[E] 살펴보기"),
     # 11.2 opening

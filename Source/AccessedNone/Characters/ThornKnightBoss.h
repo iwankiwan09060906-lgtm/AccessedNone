@@ -11,7 +11,8 @@ class UTextRenderComponent;
  * E2 "가시 갑옷의 기사" (spec 5 E2): high-poly thorn armor (Spike_Hitbox_* cones), "Triangles: 48,000,000" over its head,
  * a fake frame drop when the fight starts, 99 % reduction + 300 % reflect (data). Mesh quality 0 → the thorns dissolve in
  * 0.6 s while a crude knight made of big boxes (the "SK_ThornKnight_Low" swap) grows in its place, bound to the skeleton so it
- * keeps animating; all spike collision turns off.
+ * keeps animating; all spike collision turns off. While armored, any hit on it fires a thorn burst back at the player
+ * (boss skill damage = death, user revision replacing the 300 % reflect).
  */
 UCLASS()
 class ACCESSEDNONE_API AThornKnightBoss : public AMetaBossBase
@@ -27,12 +28,18 @@ public:
 	const TArray<TObjectPtr<UStaticMeshComponent>>& GetSpikes() const { return Spikes; }
 	const TArray<TObjectPtr<UStaticMeshComponent>>& GetBlocks() const { return Blocks; }
 
+	/** Thorn bursts fired so far (tests). */
+	int32 GetThornStrikeCount() const { return ThornStrikes; }
+
 	UPROPERTY(EditDefaultsOnly, Category="ThornKnight") float DissolveSeconds = 0.6f;
+	UPROPERTY(EditDefaultsOnly, Category="ThornKnight") float ThornBurstSeconds = 0.35f;
+	UPROPERTY(EditDefaultsOnly, Category="ThornKnight") float ThornBurstScale = 2.2f;
 	UPROPERTY(EditDefaultsOnly, Category="ThornKnight") float FrameDropSeconds = 1.5f;
 	UPROPERTY(EditDefaultsOnly, Category="ThornKnight") int32 FrameDropFPS = 9;
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 	virtual void HandleGimmickStateChanged(EGimmickState Old, EGimmickState New) override;
 
 private:
@@ -40,6 +47,7 @@ private:
 	void FinishLowPoly();
 	void PlayFrameDrop();
 	void BuildBlockBody();
+	void HandleAnyDamage(AActor* Target, float Damage, bool bImmune);
 	void SetBlockAlpha(float Alpha);
 
 	UPROPERTY(VisibleAnywhere, Category="ThornKnight") TArray<TObjectPtr<UStaticMeshComponent>> Spikes;
@@ -50,6 +58,9 @@ private:
 	TArray<FVector> SpikeScales;
 	TArray<FVector> BlockScales;
 	float DissolveElapsed = -1.f;
+	float ThornBurstLeft = 0.f;
+	int32 ThornStrikes = 0;
+	FDelegateHandle DamageHandle;
 	int32 HintTier = 0;
 	bool bLowPoly = false;
 };

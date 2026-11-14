@@ -8,7 +8,7 @@
 #include "Core/BreakpointActor.h"
 #include "Gimmick/EncounterTriggerBox.h"
 #include "Meta/MetaSaveSubsystem.h"
-#include "UI/MetaDeathScreenWidget.h"
+#include "UI/MetaYouDiedWidget.h"
 #include "UI/MetaUI.h"
 #include "TimerManager.h"
 
@@ -68,21 +68,32 @@ void AMetaGameMode::HandlePlayerDeath(AMetaPlayerCharacter* Player)
 	{
 		return;
 	}
+	DeadPlayer = Player;
 	if (APlayerController* PC = Cast<APlayerController>(Player->GetController()))
 	{
-		DeathScreen = CreateWidget<UUserWidget>(PC, MetaUI::WidgetClass<UMetaDeathScreenWidget>(TEXT("WBP_DeathScreen")));
+		DeathScreen = CreateWidget<UUserWidget>(PC, MetaUI::WidgetClass<UMetaYouDiedWidget>(TEXT("WBP_YouDied")));
 		DeathScreen->AddToViewport(15);
+		FInputModeGameAndUI Mode;
+		Mode.SetWidgetToFocus(DeathScreen->TakeWidget());
+		Mode.SetHideCursorDuringCapture(false);
+		PC->SetInputMode(Mode);
+		PC->SetShowMouseCursor(true);
 	}
-	const float Delay = FMath::Min(UAccessedNoneSettings::Get().RespawnMaxSeconds - 0.5f, 2.5f);
-	GetWorldTimerManager().SetTimer(RespawnTimer, FTimerDelegate::CreateUObject(this, &AMetaGameMode::Respawn, TWeakObjectPtr<AMetaPlayerCharacter>(Player)), Delay, false);
 }
 
-void AMetaGameMode::Respawn(TWeakObjectPtr<AMetaPlayerCharacter> Player)
+void AMetaGameMode::RequestRespawn()
 {
+	const TWeakObjectPtr<AMetaPlayerCharacter> Player = DeadPlayer;
+	DeadPlayer.Reset();
 	if (DeathScreen)
 	{
 		DeathScreen->RemoveFromParent();
 		DeathScreen = nullptr;
+	}
+	if (APlayerController* PC = Player.IsValid() ? Cast<APlayerController>(Player->GetController()) : nullptr)
+	{
+		PC->SetInputMode(FInputModeGameOnly());
+		PC->SetShowMouseCursor(false);
 	}
 	if (Player.IsValid())
 	{

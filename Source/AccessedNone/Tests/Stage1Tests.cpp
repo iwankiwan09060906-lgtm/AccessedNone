@@ -7,6 +7,7 @@
 #include "Characters/AssassinBoss.h"
 #include "Characters/MetaPlayerCharacter.h"
 #include "Characters/ThornKnightBoss.h"
+#include "Characters/BossDataAsset.h"
 #include "Combat/MetaCombatAttributeSet.h"
 #include "Combat/MetaGameplayEffects.h"
 #include "Components/StaticMeshComponent.h"
@@ -22,6 +23,8 @@
 #include "Meta/HintSubsystem.h"
 #include "Meta/MetaSettingsSubsystem.h"
 #include "UI/MetaSettingsWidget.h"
+#include "UI/MetaYouDiedWidget.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "UnrealClient.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -124,6 +127,13 @@ namespace Stage1Test
 				Kill(Trigger(Id)->Bosses[0], Player());
 				T->TestTrue(FString::Printf(TEXT("death %d"), Death), Player()->IsDead());
 			}, 0.3f);
+			Then([T]()
+			{
+				AMetaGameMode* GM = World()->GetAuthGameMode<AMetaGameMode>();
+				T->TestTrue(TEXT("YOU DIED screen with retry / main menu"), GM->GetDeathScreen() && GM->GetDeathScreen()->IsA<UMetaYouDiedWidget>());
+				T->TestTrue(TEXT("no auto respawn: still dead until 다시하기"), Player()->IsDead());
+				GM->RequestRespawn(); // "다시하기"
+			}, 0.5f);
 			WaitUntil(T, FString::Printf(TEXT("respawn after death %d (<= 3 s)"), Death), 3.0, []() { return !Player()->IsDead(); });
 			Then([T, Id, BreakpointId, Death, Hint3, Hint5]()
 			{
@@ -210,18 +220,31 @@ bool FStage1EncountersTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("debugger E1_CLEAR"), Said(TEXT("E1_CLEAR")));
 	}, 2.4f);
 
-	// E2: 99% reduction + 300% reflect; mesh quality 0 strips the thorns, 10 light hits.
+	// E2: fast one-shot charges, 99% reduction, lethal thorn counter; mesh quality 0 strips the thorns, 10 light hits.
 	RunEncounter(this, TEXT("E2"), TEXT("BP_Stage1_Hall"), EMetaSettingKey::MeshQuality, 0.f, 3.f, TEXT("HINT_E2_3"), TEXT("HINT_E2_5"),
 		[this](AMetaBossBase* Boss)
 		{
 			const AThornKnightBoss* K = Cast<AThornKnightBoss>(Boss);
 			TestTrue(TEXT("high-poly thorns"), K && !K->IsLowPoly() && K->GetSpikes()[0]->GetCollisionEnabled() != ECollisionEnabled::NoCollision);
+			TestTrue(TEXT("charges fast while armored"), Boss->GetCharacterMovement()->MaxWalkSpeed >= 1500.f);
+			bool bOneShot = Boss->GetBossData()->PatternSet_Armored.Num() > 0;
+			for (const FBossPattern& P : Boss->GetBossData()->PatternSet_Armored) { bOneShot &= P.FixedDamage >= Player()->GetMaxHealth(); }
+			TestTrue(TEXT("every armored swing one-shots the knight"), bOneShot);
+
+			// Thorn counter: give the hero a huge pool so the test survives, then measure the burst.
+			UAbilitySystemComponent* PASC = Player()->GetAbilitySystemComponent();
+			const float MaxHP = Player()->GetMaxHealth();
+			PASC->SetNumericAttributeBase(UMetaCombatAttributeSet::GetMaxHealthAttribute(), 1.0e6f);
+			PASC->SetNumericAttributeBase(UMetaCombatAttributeSet::GetHealthAttribute(), 1.0e6f);
 			const float BossHP = Boss->GetHealth();
-			const float PlayerHP = Player()->GetHealth();
+			const int32 Strikes = K ? K->GetThornStrikeCount() : 0;
 			Hit(Player(), Boss, 1.f);
 			const float D = Player()->GetAttributes()->GetAttackPower();
 			TestNearlyEqual(TEXT("99% reduction"), BossHP - Boss->GetHealth(), D * 0.01f, 0.01f);
-			TestNearlyEqual(TEXT("300% of raw reflected"), PlayerHP - Player()->GetHealth(), D * 3.f, 0.5f);
+			TestTrue(TEXT("hitting it fires the thorns"), K && K->GetThornStrikeCount() == Strikes + 1);
+			TestTrue(TEXT("thorn burst is lethal (>= any player HP)"), 1.0e6f - Player()->GetHealth() >= 3000.f);
+			PASC->SetNumericAttributeBase(UMetaCombatAttributeSet::GetMaxHealthAttribute(), MaxHP);
+			PASC->SetNumericAttributeBase(UMetaCombatAttributeSet::GetHealthAttribute(), MaxHP);
 		},
 		[this](AMetaBossBase* Boss)
 		{
@@ -231,7 +254,8 @@ bool FStage1EncountersTest::RunTest(const FString& Parameters)
 			const float PlayerHP = Player()->GetHealth();
 			const float BossHP = Boss->GetHealth();
 			Hit(Player(), Boss, 1.f);
-			TestEqual(TEXT("no reflect once broken"), Player()->GetHealth(), PlayerHP);
+			TestEqual(TEXT("no thorns once broken"), Player()->GetHealth(), PlayerHP);
+			TestTrue(TEXT("normal speed once broken"), Boss->GetCharacterMovement()->MaxWalkSpeed < 1000.f);
 			TestNearlyEqual(TEXT("full damage once broken"), BossHP - Boss->GetHealth(), Player()->GetAttributes()->GetAttackPower(), 0.01f);
 			Boss->GetAbilitySystemComponent()->SetNumericAttributeBase(UMetaCombatAttributeSet::GetHealthAttribute(), Boss->GetMaxHealth());
 		}, 10);
@@ -291,6 +315,9 @@ bool FStage1TourTest::RunTest(const FString& Parameters)
 	Then([](){}, 0.5f);
 	Shot(TEXT("09_Settings"));
 	Then([]() { PC()->ToggleMenu(); }, 0.5f);
+	Then([]() { Player()->GetAbilitySystemComponent()->RemoveLooseGameplayTag(MetaTags::State_Invulnerable); Kill(Trigger(TEXT("E2"))->Bosses[0], Player()); }, 0.5f);
+	Then([](){}, 2.6f);
+	Shot(TEXT("10_YouDied"));
 	return true;
 }
 

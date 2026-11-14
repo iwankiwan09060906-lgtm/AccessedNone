@@ -58,7 +58,10 @@ private:
 	void SetPresent(bool bPresent);
 	bool IsDummy() const;
 
+	void ApplyMoveSpeed(float Speed);
+
 	FTimerHandle DeathTimer;
+	float DefaultWalkSpeed = 0.f;
 
 	TWeakObjectPtr<AActor> EncounterTarget;
 	FTransform SpawnTransform;

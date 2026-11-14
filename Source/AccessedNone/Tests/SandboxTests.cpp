@@ -353,7 +353,8 @@ bool FSandboxRollTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, S]()
 	{
 		const FVector Moved = S->Player->GetActorLocation() - S->Start;
-		TestTrue(TEXT("no input = forward roll"), FVector::DotProduct(Moved, S->Forward) > 300.f);
+		TestTrue(FString::Printf(TEXT("no input = forward roll (moved %.0f along forward, %.0f total)"), FVector::DotProduct(Moved, S->Forward), Moved.Size2D()),
+			FVector::DotProduct(Moved, S->Forward) > 300.f);
 		// Out of stamina: blocked even after the cooldown.
 		S->Player->GetAbilitySystemComponent()->SetNumericAttributeBase(UMetaCombatAttributeSet::GetStaminaAttribute(), 0.f);
 		S->Start = S->Player->GetActorLocation();

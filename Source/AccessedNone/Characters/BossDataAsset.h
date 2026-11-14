@@ -71,6 +71,9 @@ public:
 	/** Practice target (L_Dev_Sandbox): never attacks or moves, revives RespawnDelay seconds after vanishing. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Boss") bool bTrainingDummy = false;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Boss") float RespawnDelay = 1.5f;
+	/** Walk speed per state (cm/s); 0 keeps the character default. E2 charges at the player while armored. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Boss") float ArmoredMoveSpeed = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Boss") float VulnerableMoveSpeed = 0.f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<FBossPattern> PatternSet_Armored;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<FBossPattern> PatternSet_Vulnerable;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Hints") TObjectPtr<UHintDataAsset> HintAsset;
