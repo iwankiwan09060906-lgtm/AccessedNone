@@ -384,3 +384,51 @@ bool FSandboxRollTest::RunTest(const FString& Parameters)
 }
 
 #endif
+
+#if WITH_DEV_AUTOMATION_TESTS
+
+/** Locking onto the 3x dummy eases the camera back toward CameraArmMax; releasing eases it back in. */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSandboxCameraTest, "AccessedNone.Sandbox.Camera", EAutomationTestFlags::ClientContext | EAutomationTestFlags::ProductFilter)
+bool FSandboxCameraTest::RunTest(const FString& Parameters)
+{
+	UWorld* World = nullptr;
+	for (const FWorldContext& Ctx : GEngine->GetWorldContexts())
+	{
+		if (Ctx.WorldType == EWorldType::Game && Ctx.World()) { World = Ctx.World(); }
+	}
+	AMetaPlayerCharacter* P = World ? Cast<AMetaPlayerCharacter>(UGameplayStatics::GetPlayerPawn(World, 0)) : nullptr;
+	AMetaPlayerController* PC = World ? Cast<AMetaPlayerController>(UGameplayStatics::GetPlayerController(World, 0)) : nullptr;
+	TActorIterator<AMetaBossBase> BossIt(World);
+	if (!P || !PC || !BossIt)
+	{
+		AddError(TEXT("Run this inside L_Dev_Sandbox with -game"));
+		return false;
+	}
+	TWeakObjectPtr<AMetaPlayerCharacter> Player = P;
+	const FVector BossLoc = BossIt->GetActorLocation();
+	const FVector Stand = BossLoc + BossIt->GetActorForwardVector() * 700.f;
+	P->SetActorLocation(FVector(Stand.X, Stand.Y, P->GetActorLocation().Z), false, nullptr, ETeleportType::TeleportPhysics);
+	PC->SetControlRotation((BossLoc - Stand).GetSafeNormal2D().Rotation());
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Player]()
+	{
+		Player->ToggleLockOn();
+		TestTrue(TEXT("locked onto the dummy"), Player->IsLockedOn());
+	}, 0.5f));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Player]()
+	{
+		const UAccessedNoneSettings& S = UAccessedNoneSettings::Get();
+		AddInfo(FString::Printf(TEXT("locked arm = %.0f"), Player->GetCameraArmLength()));
+		TestTrue(TEXT("camera pulled back for the big boss (>= 650)"), Player->GetCameraArmLength() >= 650.f);
+		TestTrue(TEXT("never past the max"), Player->GetCameraArmLength() <= S.CameraArmMax + 1.f);
+		Player->ToggleLockOn();
+	}, 2.5f));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Player]()
+	{
+		const UAccessedNoneSettings& S = UAccessedNoneSettings::Get();
+		TestNearlyEqual(TEXT("camera back to normal after release"), Player->GetCameraArmLength(), S.CameraArmLength, 15.f);
+	}, 2.5f));
+	return true;
+}
+
+#endif

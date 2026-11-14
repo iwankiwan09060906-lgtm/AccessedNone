@@ -58,6 +58,7 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="Combat") bool IsLockedOn() const { return LockOnTarget.IsValid(); }
 	UFUNCTION(BlueprintPure, Category="Combat") AActor* GetLockOnTarget() const { return LockOnTarget.Get(); }
+	UFUNCTION(BlueprintPure, Category="Camera") float GetCameraArmLength() const;
 	UFUNCTION(BlueprintPure, Category="Combat") int32 GetHealFlaskCount() const { return HealFlaskCount; }
 	UFUNCTION(BlueprintCallable, Category="Combat") void RefillHealFlasks();
 
@@ -82,6 +83,7 @@ private:
 	void TickLockOn(float DeltaSeconds);
 	void TickRoll(float DeltaSeconds);
 	void TickAim();
+	void TickCameraDistance(float DeltaSeconds);
 
 	TWeakObjectPtr<AActor> LockOnTarget;
 	int32 HealFlaskCount = 0;

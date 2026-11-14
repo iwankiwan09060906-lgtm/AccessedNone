@@ -36,7 +36,7 @@ AMetaPlayerCharacter::AMetaPlayerCharacter()
 
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength = 400.f;
+	CameraBoom->TargetArmLength = UAccessedNoneSettings::Get().CameraArmLength;
 	CameraBoom->bUsePawnControlRotation = true;
 
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
@@ -140,6 +140,25 @@ void AMetaPlayerCharacter::Tick(float DeltaSeconds)
 	TickLockOn(DeltaSeconds);
 	TickRoll(DeltaSeconds);
 	TickAim();
+	TickCameraDistance(DeltaSeconds);
+}
+
+float AMetaPlayerCharacter::GetCameraArmLength() const
+{
+	return CameraBoom->TargetArmLength;
+}
+
+void AMetaPlayerCharacter::TickCameraDistance(float DeltaSeconds)
+{
+	const UAccessedNoneSettings& S = UAccessedNoneSettings::Get();
+	float Desired = S.CameraArmLength;
+	if (const ACharacter* Target = Cast<ACharacter>(LockOnTarget.Get()))
+	{
+		constexpr float NormalHalfHeight = 96.f;
+		const float HalfHeight = Target->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+		Desired = FMath::Min(S.CameraArmMax, S.CameraArmLength + S.LockOnArmBonus + FMath::Max(0.f, HalfHeight - NormalHalfHeight) * S.LockOnArmPerHeight);
+	}
+	CameraBoom->TargetArmLength = FMath::FInterpTo(CameraBoom->TargetArmLength, Desired, DeltaSeconds, S.CameraArmInterpSpeed);
 }
 
 const FHeroDef* AMetaPlayerCharacter::GetHeroDef() const

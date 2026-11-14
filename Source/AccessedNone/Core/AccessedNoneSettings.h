@@ -138,6 +138,15 @@ public:
 	/** Full cone angle in front of the camera. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|LockOn", meta=(Units="deg")) float LockOnConeAngle = 60.f;
 
+	// --- Camera distance: pulls back while locked on, more for bigger targets ---
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Camera", meta=(Units="cm")) float CameraArmLength = 400.f;
+	/** Extra distance for any lock-on target. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Camera", meta=(Units="cm")) float LockOnArmBonus = 60.f;
+	/** Extra distance per cm of target half-height above a normal character (96 cm): a 3x boss ends near the max. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Camera") float LockOnArmPerHeight = 1.5f;
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Camera", meta=(Units="cm")) float CameraArmMax = 750.f;
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Camera") float CameraArmInterpSpeed = 3.f;
+
 	// --- 7.5 Animation-free combat: player attack timing (windup → active → recovery) ---
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Attack") float LightWindup = 0.25f;
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Attack") float LightActive = 0.15f;
