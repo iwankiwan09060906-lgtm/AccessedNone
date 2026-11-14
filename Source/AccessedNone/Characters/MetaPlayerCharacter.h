@@ -31,6 +31,8 @@ public:
 	FVector GetAttackExtent() const { return AttackExtent; }
 	FVector GetAttackOffset() const { return AttackOffset; }
 	bool ActivateAbility(TSubclassOf<UGameplayAbility> AbilityClass);
+	/** Current hero's light combo step or heavy attack animation, stretched to the attack's duration. */
+	void PlayAttackMotion(bool bHeavy, float TotalSeconds);
 
 	// --- Used by abilities ---
 	/** Spends stamina if any is left (souls-style: an action is allowed while Stamina > 0). */
@@ -66,6 +68,9 @@ private:
 	double LastStaminaSpendTime = -1000.0;
 	FVector AttackExtent = FVector(100.f, 100.f, 90.f);
 	FVector AttackOffset = FVector(120.f, 0.f, 0.f);
+	int32 HeroIndex = 0;
+	int32 ComboStep = 0;
+	double LastLightAttackTime = -1000.0;
 	bool bDashing = false;
 	bool bHealing = false;
 };

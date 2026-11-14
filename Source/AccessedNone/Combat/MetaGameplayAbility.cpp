@@ -47,7 +47,9 @@ void UGA_MeleeAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, c
 	}
 
 	AlreadyHit.Reset();
-	UAbilityTask_WaitDelay* Wait = UAbilityTask_WaitDelay::WaitDelay(this, GetParams().Windup);
+	const FAttackParams P = GetParams();
+	Character->PlayAttackMotion(P.DamageType == MetaTags::Damage_Type_Heavy, P.Windup + P.Active + P.Recovery);
+	UAbilityTask_WaitDelay* Wait = UAbilityTask_WaitDelay::WaitDelay(this, P.Windup);
 	Wait->OnFinish.AddDynamic(this, &UGA_MeleeAttack::OnActiveStart);
 	Wait->ReadyForActivation();
 }

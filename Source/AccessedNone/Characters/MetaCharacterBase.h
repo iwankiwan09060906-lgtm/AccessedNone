@@ -29,6 +29,14 @@ public:
 	/** Paragon anim BPs play an intro montage (LevelStart / SelectScreen) on init whose weapon-summon pose looks broken without its FX. Call after (re)creating the anim instance. */
 	void SuppressIntroMontages();
 
+	/**
+	 * Plays an attack motion stretched to TotalSeconds (windup + active + recovery), so the swing lands with the hit
+	 * of the animation-free combat rules (spec 7.5). Sequences play as a dynamic montage in AttackSlot.
+	 */
+	void PlayAttackAnim(UAnimSequenceBase* Anim, float TotalSeconds);
+	/** Slot for sequence-based attacks; taken from the first montage played. */
+	FName AttackSlot = TEXT("DefaultSlot");
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void HandleDeath(const FGameplayEventData* Payload);

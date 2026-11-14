@@ -24,8 +24,8 @@ namespace
 	constexpr double BarBurstSeconds = 1.0;
 	constexpr float BarBurstScale = 14.f;
 	constexpr double PopupStart = 0.8;
-	constexpr double PopupInterval = 0.2;
-	constexpr int32 PopupMax = 14;
+	constexpr double PopupInterval = 0.1;
+	constexpr int32 PopupMax = 28; // 2x the errors in the same 4 s
 	constexpr double OverflowTotal = 4.0;
 
 	UCanvasPanelSlot* PlaceCentered(UCanvasPanel* Canvas, UWidget* W, FVector2D Anchor)

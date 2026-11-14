@@ -4,7 +4,9 @@
 #include "Core/MetaLog.h"
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "TimerManager.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 AMetaCharacterBase::AMetaCharacterBase()
@@ -36,6 +38,9 @@ void AMetaCharacterBase::SuppressIntroMontages()
 		Anim->StopAllMontages(0.f);
 		Anim->OnMontageStarted.AddUniqueDynamic(this, &AMetaCharacterBase::HandleMontageStarted);
 	}
+	// The intro's dissolve writes per-slot material overrides (fully dissolved = invisible); drop them after the window.
+	FTimerHandle Handle;
+	GetWorldTimerManager().SetTimer(Handle, FTimerDelegate::CreateWeakLambda(this, [this]() { GetMesh()->EmptyOverrideMaterials(); }), static_cast<float>(IntroWindowSeconds) + 0.1f, false);
 }
 
 void AMetaCharacterBase::HandleMontageStarted(UAnimMontage* Montage)
@@ -43,6 +48,7 @@ void AMetaCharacterBase::HandleMontageStarted(UAnimMontage* Montage)
 	if (GetWorld()->GetTimeSeconds() < IntroMontageWindowEnd)
 	{
 		GetMesh()->GetAnimInstance()->Montage_Stop(0.f, Montage);
+		GetMesh()->EmptyOverrideMaterials();
 	}
 }
 
@@ -61,4 +67,27 @@ void AMetaCharacterBase::HandleDeath(const FGameplayEventData* /*Payload*/)
 	AbilitySystem->CancelAllAbilities();
 	GetCharacterMovement()->DisableMovement();
 	OnDeath();
+}
+
+void AMetaCharacterBase::PlayAttackAnim(UAnimSequenceBase* Anim, float TotalSeconds)
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (!Anim || !AnimInstance || TotalSeconds <= 0.f)
+	{
+		return;
+	}
+	IntroMontageWindowEnd = 0.0; // a real attack must not be swallowed by the intro suppression
+	const float Rate = Anim->GetPlayLength() / TotalSeconds;
+	if (UAnimMontage* Montage = Cast<UAnimMontage>(Anim))
+	{
+		if (!Montage->SlotAnimTracks.IsEmpty())
+		{
+			AttackSlot = Montage->SlotAnimTracks[0].SlotName;
+		}
+		AnimInstance->Montage_Play(Montage, Rate);
+	}
+	else
+	{
+		AnimInstance->PlaySlotAnimationAsDynamicMontage(Anim, AttackSlot, 0.1f, 0.2f, Rate);
+	}
 }

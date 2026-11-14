@@ -8,6 +8,7 @@ import unreal
 ENTRIES = [
     # 11.1 common / system
     ("UI_DEATH", "Player = None"),
+    ("UI_DEATH_SUB", "LogScript: Error: Accessed None trying to read property \"Player\""),
     ("UI_DEMON_VANQUISHED", "DEMON VANQUISHED"),
     ("UI_DEMON_VANQUISHED_GLITCH", "DEMON VANQ??$#ED"),
     ("UI_SYSTEM_VANQUISHED", "SYSTEM VANQUISHED"),

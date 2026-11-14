@@ -202,6 +202,8 @@ void AMetaPlayerController::AN_Status()
 	{
 		FGameplayTagContainer OwnedTags;
 		It->GetAbilitySystemComponent()->GetOwnedGameplayTags(OwnedTags);
+		UE_LOG(LogAccessedNone, Display, TEXT("[AN_Status] %s at %s hidden=%d mesh=%s visible=%d"), *It->GetName(), *It->GetActorLocation().ToCompactString(),
+			It->IsHidden(), *GetNameSafe(It->GetMesh()->GetSkeletalMeshAsset()), It->GetMesh()->IsVisible());
 		UE_LOG(LogAccessedNone, Display, TEXT("[AN_Status] %s state=%s HP=%.1f/%.0f DR=%.2f tags=%s effects=%d data=%s"), *It->GetName(),
 			*UEnum::GetValueAsString(It->GetGimmick()->GetState()), It->GetHealth(), It->GetMaxHealth(),
 			It->GetAttributes()->GetDamageReduction(), *OwnedTags.ToStringSimple(), It->GetAbilitySystemComponent()->GetActiveEffects(FGameplayEffectQuery()).Num(), *GetNameSafe(It->GetBossData()));

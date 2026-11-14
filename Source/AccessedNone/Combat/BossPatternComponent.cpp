@@ -1,4 +1,5 @@
 #include "Combat/BossPatternComponent.h"
+#include "Characters/MetaCharacterBase.h"
 #include "Combat/MeleeHitboxComponent.h"
 #include "Combat/MetaGameplayEffects.h"
 #include "Core/MetaGameplayTags.h"
@@ -85,6 +86,11 @@ void UBossPatternComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 		}
 		StopMoving();
 		BeginPhase(EPhase::Windup, Patterns[Current].Windup);
+		if (AMetaCharacterBase* Character = Cast<AMetaCharacterBase>(Owner); Character && Patterns[Current].OptionalMontage)
+		{
+			const FBossPattern& P = Patterns[Current];
+			Character->PlayAttackAnim(P.OptionalMontage, P.Windup + P.Active + P.Recovery);
+		}
 		OnPatternPhase.Broadcast(Patterns[Current].PatternId, true);
 		return;
 	}

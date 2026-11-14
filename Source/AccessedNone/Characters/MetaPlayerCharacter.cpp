@@ -7,6 +7,7 @@
 #include "Meta/MetaSettingsSubsystem.h"
 #include "Meta/EncounterSubsystem.h"
 #include "AbilitySystemComponent.h"
+#include "Animation/AnimMontage.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -69,6 +70,9 @@ void AMetaPlayerCharacter::SetHero(int32 Index)
 		return;
 	}
 	const FHeroDef& H = Heroes[Index];
+	HeroIndex = Index;
+	ComboStep = 0;
+	AttackSlot = TEXT("DefaultSlot");
 	USkeletalMeshComponent* M = GetMesh();
 	// Paragon anim BPs write per-slot material overrides (intro dissolve); drop them or the next hero renders with the previous hero's materials.
 	M->EmptyOverrideMaterials();
@@ -143,6 +147,37 @@ void AMetaPlayerCharacter::SetDashing(bool bWantsDash)
 bool AMetaPlayerCharacter::ActivateAbility(TSubclassOf<UGameplayAbility> AbilityClass)
 {
 	return !IsDead() && AbilitySystem->TryActivateAbilityByClass(AbilityClass);
+}
+
+void AMetaPlayerCharacter::PlayAttackMotion(bool bHeavy, float TotalSeconds)
+{
+	const UAccessedNoneSettings& S = UAccessedNoneSettings::Get();
+	if (!S.Heroes.IsValidIndex(HeroIndex))
+	{
+		return;
+	}
+	const FHeroDef& H = S.Heroes[HeroIndex];
+	if (!H.LightAttackAnims.IsEmpty())
+	{
+		// Sequence-based heavy attacks reuse the light montages' slot, so learn it first.
+		if (UAnimMontage* First = Cast<UAnimMontage>(H.LightAttackAnims[0].LoadSynchronous()); First && !First->SlotAnimTracks.IsEmpty())
+		{
+			AttackSlot = First->SlotAnimTracks[0].SlotName;
+		}
+	}
+	if (bHeavy)
+	{
+		PlayAttackAnim(H.HeavyAttackAnim.LoadSynchronous(), TotalSeconds);
+		return;
+	}
+	if (H.LightAttackAnims.IsEmpty())
+	{
+		return;
+	}
+	const double Now = GetWorld()->GetTimeSeconds();
+	ComboStep = Now - LastLightAttackTime <= S.ComboResetSeconds ? (ComboStep + 1) % H.LightAttackAnims.Num() : 0;
+	LastLightAttackTime = Now;
+	PlayAttackAnim(H.LightAttackAnims[ComboStep].LoadSynchronous(), TotalSeconds);
 }
 
 // --- Stamina / heal ---------------------------------------------------------
@@ -250,7 +285,7 @@ AActor* AMetaPlayerCharacter::FindLockOnTarget() const
 	for (const FOverlapResult& O : Overlaps)
 	{
 		const AMetaCharacterBase* Candidate = Cast<AMetaCharacterBase>(O.GetActor());
-		if (!Candidate || Candidate->IsDead() || Candidate->IsA<AMetaPlayerCharacter>())
+		if (!Candidate || Candidate->IsDead() || Candidate->IsHidden() || Candidate->IsA<AMetaPlayerCharacter>())
 		{
 			continue;
 		}

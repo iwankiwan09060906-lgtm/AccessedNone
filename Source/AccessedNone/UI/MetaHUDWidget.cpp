@@ -2,6 +2,7 @@
 #include "UI/MetaUI.h"
 #include "UI/MetaBossBarWidget.h"
 #include "Characters/MetaBossBase.h"
+#include "Characters/BossDataAsset.h"
 #include "Characters/MetaPlayerCharacter.h"
 #include "Combat/MetaCombatAttributeSet.h"
 #include "Core/MetaText.h"
@@ -234,6 +235,10 @@ void UMetaHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 
 	const UEncounterSubsystem* Encounters = GetWorld()->GetSubsystem<UEncounterSubsystem>();
 	AMetaBossBase* Boss = Encounters ? Encounters->GetPrimaryBoss() : nullptr;
+	if (Boss && (!Boss->GetBossData() || Boss->GetBossData()->DisplayNameKey.IsNone()))
+	{
+		Boss = nullptr; // unnamed minions get no boss bar (souls-like)
+	}
 	BossBar->SetBoss(Boss);
 	BossBar->SetVisibility(Boss && bStatusVisible ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 

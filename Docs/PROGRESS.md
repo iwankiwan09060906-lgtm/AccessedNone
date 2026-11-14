@@ -33,6 +33,8 @@
 | S2-T09 | 페이즈 2~4 | DONE | 테이프 스톱(피치 1→0.3), 글리치, `M_SkyCrack`(보라 균열+붉은 노드), IB 번개, 방어 개체 낙하(`ADefenseEntity`, `M_WorldGrid`), 로그 5줄, 오버플로우 바, 끊기는 휘두르기, 참격, 강제 즉사(3.4초) |
 | S2-T10 | 페이즈 5 | DONE | `Player = None`, 디버거 첫 등장, 오류창 파훼 → `L_Stage1_DarkGrove`(플레이스홀더) 로드 |
 
+**Stage 2 개정 (사용자 지시, 2026-11-14):** 페이즈 1 맵 확장(GrassLands 대로·던전, Khaimera 잡몹 3 + Narbash 소환 보스), 깨지는 하늘 + 디지털 레인, IB Warriors 40체 낙하 + 거대 폭발 강제 패배, 게임풍 사망 화면, 오버플로우 2배, 플레이어·보스 공격 모션. `Flow.Opening` 갱신 후 통과, 스크린샷 확인.
+
 **Stage 2 DoD:** 빌드 경고 0 ✅ · 에디터 테스트 15/15 + 게임 테스트 2/2 (`Flow.Opening`, `Sandbox.BossFlow`) ✅ · 타이틀 → 엔딩 직전 스테이지 1 진입까지 한 번에 진행(`Flow.Opening`, 렌더링 + 스크린샷 14장) ✅ · GameUserSettings 미변경 ✅ · **손 조작 확인 대기 (MANUAL_STEPS #4)**
 
 ## Stage 3~6

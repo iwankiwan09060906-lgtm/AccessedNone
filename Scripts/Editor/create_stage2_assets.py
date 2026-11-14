@@ -38,55 +38,45 @@ def custom(mat, code, inputs, out_type, x, y):
     return node
 
 
-# ---------------------------------------------------------------- T_VoidNodes (hand-made "blueprint node" texture)
-def make_node_png(path, size=512):
-    random.seed(7)
-    px = [[(4, 2, 6)] * size for _ in range(size)]
+# ---------------------------------------------------------------- T_DigitAtlas (digits 0-9, 5x7 bitmap font, for the digital rain)
+DIGITS = ["01110100011001110101110011000101110", "00100011000010000100001000010001110", "01110100010000100010001000100011111",
+          "11111000100010000010000011000101110", "00010001100101010010111110001000010", "11111100001111000001000011000101110",
+          "00110010001000011110100011000101110", "11111000010001000100010000100001000", "01110100011000101110100011000101110",
+          "01110100011000101111000010001001100"]
 
-    def rect(x0, y0, x1, y1, c):
-        for y in range(max(0, y0), min(size, y1)):
-            row = px[y]
-            for x in range(max(0, x0), min(size, x1)):
-                row[x] = c
 
-    def line(x0, y0, x1, y1, c):
-        steps = max(abs(x1 - x0), abs(y1 - y0), 1)
-        for i in range(steps + 1):
-            t = i / steps
-            x = int(x0 + (x1 - x0) * t)
-            y = int(y0 + (y1 - y0) * (3 * t * t - 2 * t * t * t))  # S-curve wire
-            rect(x, y, x + 2, y + 2, c)
-
-    nodes = []
-    for _ in range(14):
-        w, h = random.randint(70, 130), random.randint(50, 100)
-        x, y = random.randint(0, size - w), random.randint(0, size - h)
-        nodes.append((x, y, w, h))
-    for (x, y, w, h), (x2, y2, w2, h2) in zip(nodes, nodes[1:]):
-        line(x + w, y + 30, x2, y2 + 30, (200, 30, 40))
-    for x, y, w, h in nodes:
-        rect(x, y, x + w, y + h, (40, 8, 12))
-        rect(x, y, x + w, y + 14, (230, 36, 59))
-        for k in range(3):
-            rect(x + 6, y + 24 + k * 18, x + 14, y + 32 + k * 18, (255, 90, 90))
-            rect(x + w - 14, y + 24 + k * 18, x + w - 6, y + 32 + k * 18, (255, 90, 90))
-    raw = b"".join(b"\x00" + bytes(c for p in row for c in p) for row in px)
+def make_digit_png(path, cell=64, px=7):
+    w, h = cell * 10, cell
+    img = [[0] * w for _ in range(h)]
+    ox, oy = (cell - 5 * px) // 2, (cell - 7 * px) // 2
+    for d, bits in enumerate(DIGITS):
+        for r in range(7):
+            for c in range(5):
+                if bits[r * 5 + c] == "1":
+                    for y in range(oy + r * px, oy + (r + 1) * px - 1):
+                        for x in range(d * cell + ox + c * px, d * cell + ox + (c + 1) * px - 1):
+                            img[y][x] = 255
+    raw = b"".join(b"\x00" + bytes(v for v in row for _ in range(3)) for row in img)
 
     def chunk(tag, data):
         return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
 
     with open(path, "wb") as f:
-        f.write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 2, 0, 0, 0))
+        f.write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
                 + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
 
 
-png = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_saved_dir()), "T_VoidNodes.png")
-make_node_png(png)
+png = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_saved_dir()), "T_DigitAtlas.png")
+make_digit_png(png)
 task = unreal.AssetImportTask()
 for k, v in dict(filename=png, destination_path="/Game/Core/Textures", automated=True, replace_existing=True, save=True).items():
     task.set_editor_property(k, v)
 tools.import_asset_tasks([task])
-node_tex = unreal.load_asset("/Game/Core/Textures/T_VoidNodes")
+digit_tex = unreal.load_asset("/Game/Core/Textures/T_DigitAtlas")
+digit_tex.set_editor_property("mip_gen_settings", unreal.TextureMipGenSettings.TMGS_NO_MIPMAPS)
+eal.save_loaded_asset(digit_tex, False)
+if eal.does_asset_exist("/Game/Core/Textures/T_VoidNodes"):
+    eal.delete_asset("/Game/Core/Textures/T_VoidNodes")  # replaced by the digital rain
 
 # ---------------------------------------------------------------- M_WorldGrid (defense entities, spec 4.3)
 MAT = "/Game/Core/Materials"
@@ -113,7 +103,9 @@ mel.connect_material_property(explode, "", unreal.MaterialProperty.MP_WORLD_POSI
 mel.recompile_material(grid)
 eal.save_loaded_asset(grid, False)
 
-# ---------------------------------------------------------------- M_SkyCrack (spec 4.2: purple rim, void with red nodes)
+# ---------------------------------------------------------------- M_SkyCrack (4.2, user revision: the sky shatters like glass,
+# white-purple lightning along the shard edges, green digital rain on black behind the broken shards)
+MAT = "/Game/Core/Materials"
 sky = recreate("M_SkyCrack", MAT, unreal.Material, unreal.MaterialFactoryNew())
 sky.set_editor_property("blend_mode", unreal.BlendMode.BLEND_TRANSLUCENT)
 sky.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
@@ -124,26 +116,54 @@ prog = mel.create_material_expression(sky, unreal.MaterialExpressionScalarParame
 prog.set_editor_property("parameter_name", "CrackProgress")
 prog.set_editor_property("default_value", 0.0)
 tm2 = mel.create_material_expression(sky, unreal.MaterialExpressionTime, -900, 200)
-tex = mel.create_material_expression(sky, unreal.MaterialExpressionTextureSample, -900, 300)
-tex.set_editor_property("texture", node_tex)
-crack = custom(sky, "float2 d = UV - 0.5; float r = length(d) * 2.0; float a = atan2(d.y, d.x);"
-                    " float jag = 0.18 * sin(a * 7.0 + 1.3) + 0.12 * sin(a * 13.0 + 4.1) + 0.07 * sin(a * 29.0);"
-                    " float edge = P * (0.75 + jag);"
-                    " float inside = step(r, edge);"
-                    " float rim = saturate(1.0 - abs(r - edge) * 14.0) * step(0.01, P);"
-                    " float pulse = 0.55 + 0.45 * sin(T * 4.0);"
-                    " float3 voidc = Nodes * float3(1.0, 0.25, 0.3) * pulse * 3.0;"
-                    " float3 col = voidc * inside + float3(0.54, 0.25, 0.99) * rim * 2.5;"
-                    " return float4(col, saturate(inside + rim));",
-               ["UV", "P", "T", "Nodes"], unreal.CustomMaterialOutputType.CMOT_FLOAT4, -500, 100)
-for src, pin in ((uv, "UV"), (prog, "P"), (tm2, "T")):
+texobj = mel.create_material_expression(sky, unreal.MaterialExpressionTextureObject, -900, 300)
+texobj.set_editor_property("texture", digit_tex)
+SKY_HLSL = """
+const float N = 9.0;
+float2 grid = UV * N; float2 ip = floor(grid); float2 fp = frac(grid);
+float d1 = 8.0; float d2 = 8.0; float2 cell = 0;
+for (int j = -1; j <= 1; j++) { for (int i = -1; i <= 1; i++) {
+  float2 c = ip + float2(i, j);
+  float2 h = frac(sin(float2(dot(c, float2(127.1, 311.7)), dot(c, float2(269.5, 183.3)))) * 43758.5453);
+  float2 v = float2(i, j) + h - fp; float d = dot(v, v);
+  if (d < d1) { d2 = d1; d1 = d; cell = c; } else if (d < d2) { d2 = d; }
+} }
+float edge = sqrt(d2) - sqrt(d1);
+float2 o = float2(0.5, 0.45);
+float rnd = frac(sin(dot(cell, float2(12.9898, 78.233))) * 43758.5453);
+float dist = length((cell + 0.5) / N - o);
+float front = P * 0.62;
+float broken = step(dist + rnd * 0.1, front);
+float reach = step(dist, front + 0.1) * step(0.001, P);
+float lineCore = (1.0 - smoothstep(0.0, 0.02, edge)) * reach * (1.0 - broken * 0.5);
+float glow = (1.0 - smoothstep(0.0, 0.1, edge)) * reach;
+float2 dd = UV - o;
+float mask = 1.0 - smoothstep(0.38, 0.5, max(abs(dd.x), abs(dd.y)));
+const float COLS = 70.0; const float ROWS = 40.0;
+float2 g = UV * float2(COLS, ROWS);
+float col = floor(g.x); float row = floor(g.y);
+float ch = frac(sin(col * 91.7) * 4375.85);
+float speed = 6.0 + ch * 10.0;
+float head = fmod(T * speed + ch * 200.0, ROWS + 25.0);
+float dlt = head - row;
+float trail = dlt >= 0.0 ? exp(-dlt / 7.0) : 0.0;
+float gidx = floor(frac(sin(col * 13.1 + row * 71.7 + floor(T * 3.0 + ch * 10.0) * 0.37) * 9137.1) * 10.0);
+float2 lu = frac(g);
+float glyph = Texture2DSampleLevel(Tex, TexSampler, float2((gidx + lu.x) / 10.0, lu.y), 0).r;
+float headGlow = (dlt >= 0.0 && dlt < 1.0) ? 1.0 : 0.0;
+float3 rain = glyph * (float3(0.05, 1.0, 0.25) * trail * 2.5 + float3(0.7, 1.0, 0.8) * headGlow * 3.0);
+float3 c3 = rain * broken + float3(0.54, 0.25, 0.99) * glow * 1.6 + float3(1.0, 0.95, 1.0) * lineCore * 4.0;
+return float4(c3 * mask, saturate(broken + glow * 0.9 + lineCore) * mask);
+"""
+crack = custom(sky, SKY_HLSL, ["UV", "P", "T", "Tex"], unreal.CustomMaterialOutputType.CMOT_FLOAT4, -500, 100)
+for src, pin in ((uv, "UV"), (prog, "P"), (tm2, "T"), (texobj, "Tex")):
     mel.connect_material_expressions(src, "", crack, pin)
-mel.connect_material_expressions(tex, "RGB", crack, "Nodes")
 rgb = mel.create_material_expression(sky, unreal.MaterialExpressionComponentMask, -250, 50)
 for c in ("r", "g", "b"):
     rgb.set_editor_property(c, True)
 alpha = mel.create_material_expression(sky, unreal.MaterialExpressionComponentMask, -250, 200)
-alpha.set_editor_property("a", True)
+for c, on in (("r", False), ("g", False), ("b", False), ("a", True)):  # R defaults to on → Opacity would read red
+    alpha.set_editor_property(c, on)
 mel.connect_material_expressions(crack, "", rgb, "")
 mel.connect_material_expressions(crack, "", alpha, "")
 mel.connect_material_property(rgb, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
@@ -156,50 +176,82 @@ UI = "/Game/UI"
 for wbp, parent in [("WBP_HUD", "MetaHUDWidget"), ("WBP_BossBar", "MetaBossBarWidget"), ("WBP_Settings", "MetaSettingsWidget"),
                     ("WBP_Debugger", "MetaDebuggerWidget"), ("WBP_ErrorWindow", "MetaErrorWindowWidget"),
                     ("WBP_DraggableNumber", "MetaDraggableNumberWidget"), ("WBP_BossBar_Overflow", "MetaBossBarOverflowWidget"),
-                    ("WBP_Title", "MetaTitleWidget")]:
+                    ("WBP_Title", "MetaTitleWidget"), ("WBP_DeathScreen", "MetaDeathScreenWidget")]:
     f = unreal.WidgetBlueprintFactory()
     f.set_editor_property("parent_class", cls(parent))
     bp = recreate(wbp, UI, unreal.WidgetBlueprint, f)
     unreal.BlueprintEditorLibrary.compile_blueprint(bp)
     eal.save_loaded_asset(bp, False)
 
-# ---------------------------------------------------------------- Fake boss Elbern (spec 4.1 / 3.4)
-BOSS = "/Game/Characters/Bosses/Elbern"
+# ---------------------------------------------------------------- Opening enemies (4.1, user revision): 3 fake minions
+# (Paragon Khaimera) + the summoned fake boss "Elbern" (Paragon Narbash). Attack motions come from the Paragon montages.
 
 
-def pattern(pid, max_range, windup, active, recovery, cooldown, damage, weight=1.0):
+def pattern(pid, max_range, windup, active, recovery, cooldown, damage, weight=1.0, montage=None):
     p = unreal.BossPattern()
     for k, v in dict(pattern_id=pid, min_range=0.0, max_range=max_range, windup=windup, active=active,
                      recovery=recovery, cooldown=cooldown, weight=weight, fixed_damage=damage).items():
         p.set_editor_property(k, v)
+    if montage:
+        p.set_editor_property("optional_montage", unreal.load_asset(montage))
     return p
 
 
-f = unreal.DataAssetFactory()
-f.set_editor_property("data_asset_class", cls("BossDataAsset"))
-da = eal.load_asset(f"{BOSS}/DA_Boss_Elbern") if eal.does_asset_exist(f"{BOSS}/DA_Boss_Elbern") else tools.create_asset("DA_Boss_Elbern", BOSS, None, f)
-dmg = tuning.get_editor_property("fake_boss_damage")
-da.set_editor_property("display_name_key", "OP_P1_BOSS_NAME")
-da.set_editor_property("debug_name", "BP_FakeBoss_Elbern_C")
-da.set_editor_property("hp_multiplier_override", tuning.get_editor_property("fake_boss_hp_multiplier"))
-da.set_editor_property("armored_effects", [])
-da.set_editor_property("pattern_set_armored", [pattern("Slash", 260.0, 1.0, 0.2, 1.2, 2.5, dmg, 2.0),
-                                               pattern("Smash", 320.0, 1.5, 0.25, 1.5, 5.0, dmg, 1.0)])
-da.set_editor_property("pattern_set_vulnerable", [])
-da.set_editor_property("mesh", unreal.load_asset("/Game/ParagonSevarog/Characters/Heroes/Sevarog/Meshes/Sevarog"))
-da.set_editor_property("anim_class", unreal.load_class(None, "/Game/ParagonSevarog/Characters/Heroes/Sevarog/Sevarog_AnimBlueprint.Sevarog_AnimBlueprint_C"))
-da.set_editor_property("mesh_scale", 1.0)
-eal.save_loaded_asset(da, False)
+def hero_path(hero, rel):
+    return f"/Game/Paragon{hero}/Characters/Heroes/{hero}/{rel}"
 
-bp_path = f"{BOSS}/BP_FakeBoss_Elbern"
-if not eal.does_asset_exist(bp_path):
-    f = unreal.BlueprintFactory()
-    f.set_editor_property("parent_class", cls("MetaBossBase"))
-    tools.create_asset("BP_FakeBoss_Elbern", BOSS, unreal.Blueprint, f)
-unreal.BlueprintEditorLibrary.compile_blueprint(eal.load_asset(bp_path))
-boss_class = eal.load_blueprint_class(bp_path)
-unreal.get_default_object(boss_class).set_editor_property("boss_data", da)
-eal.save_asset(bp_path)
+
+def boss_assets(folder, da_name, bp_name, hero, display_key, minion, hp_override, armored, vulnerable, scale=1.0):
+    f = unreal.DataAssetFactory()
+    f.set_editor_property("data_asset_class", cls("BossDataAsset"))
+    path = f"{folder}/{da_name}"
+    da = eal.load_asset(path) if eal.does_asset_exist(path) else tools.create_asset(da_name, folder, None, f)
+    da.set_editor_property("display_name_key", display_key)
+    da.set_editor_property("debug_name", f"{bp_name}_C")
+    da.set_editor_property("is_minion", minion)
+    da.set_editor_property("hp_multiplier_override", hp_override)
+    da.set_editor_property("armored_effects", [])
+    da.set_editor_property("pattern_set_armored", armored)
+    da.set_editor_property("pattern_set_vulnerable", vulnerable)
+    da.set_editor_property("mesh", unreal.load_asset(hero_path(hero, f"Meshes/{hero}")))
+    da.set_editor_property("anim_class", unreal.load_class(None, hero_path(hero, f"{hero}_AnimBlueprint.{hero}_AnimBlueprint_C")))
+    da.set_editor_property("mesh_scale", scale)
+    eal.save_loaded_asset(da, False)
+    bp_path = f"{folder}/{bp_name}"
+    if not eal.does_asset_exist(bp_path):
+        f = unreal.BlueprintFactory()
+        f.set_editor_property("parent_class", cls("MetaBossBase"))
+        tools.create_asset(bp_name, folder, unreal.Blueprint, f)
+    unreal.BlueprintEditorLibrary.compile_blueprint(eal.load_asset(bp_path))
+    bp_class = eal.load_blueprint_class(bp_path)
+    unreal.get_default_object(bp_class).set_editor_property("boss_data", da)
+    eal.save_asset(bp_path)
+    return bp_class
+
+
+dmg = tuning.get_editor_property("fake_boss_damage")
+KH = hero_path("Khaimera", "Animations/")
+NB = hero_path("Narbash", "Animations/")
+minion_class = boss_assets("/Game/Characters/Bosses/Khaimera", "DA_Minion_Khaimera", "BP_FakeMinion_Khaimera", "Khaimera", "", True, 0.0,
+                           [pattern("ClawA", 220.0, 0.7, 0.2, 0.9, 2.2, dmg, 1.0, KH + "Melee_A_Montage"),
+                            pattern("ClawB", 220.0, 0.7, 0.2, 0.9, 2.6, dmg, 1.0, KH + "Melee_B_Montage"),
+                            pattern("ClawC", 240.0, 0.9, 0.2, 1.1, 3.5, dmg, 0.6, KH + "Melee_C_Montage")], [])
+boss_class = boss_assets("/Game/Characters/Bosses/Elbern", "DA_Boss_Elbern", "BP_FakeBoss_Elbern", "Narbash", "OP_P1_BOSS_NAME", False,
+                         tuning.get_editor_property("fake_boss_hp_multiplier"),
+                         [pattern("Swing1", 280.0, 0.9, 0.2, 1.1, 2.4, dmg, 2.0, NB + "Primary_Swing1_Medium_Montage"),
+                          pattern("Swing2", 280.0, 0.9, 0.2, 1.1, 2.8, dmg, 1.5, NB + "Primary_Swing2_Medium_Montage"),
+                          pattern("Smash", 320.0, 1.4, 0.25, 1.5, 5.0, dmg, 1.0, NB + "Primary_Swing3_Medium_Montage")], [], 1.15)
+
+# Sandbox test boss (Narbash) gets the same swing motions.
+if eal.does_asset_exist("/Game/Dev/DA_Boss_Test"):
+    test_da = eal.load_asset("/Game/Dev/DA_Boss_Test")
+    for prop, montages in (("pattern_set_armored", ["Primary_Swing1_Medium_Montage", "Primary_Swing3_Medium_Montage"]),
+                           ("pattern_set_vulnerable", ["Primary_Swing2_Medium_Montage"])):
+        pats = list(test_da.get_editor_property(prop))
+        for p, m in zip(pats, montages):
+            p.set_editor_property("optional_montage", unreal.load_asset(NB + m))
+        test_da.set_editor_property(prop, pats)
+    eal.save_loaded_asset(test_da, False)
 
 # ---------------------------------------------------------------- Maps
 les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
@@ -235,16 +287,16 @@ def mesh_actor(mesh, loc, rot=(0, 0, 0), scale=(1, 1, 1), label=None, material=N
     return a
 
 
-def scatter(mesh, count, radius, inner=0.0, scale=(0.8, 1.2), seed=1, z=0.0):
+def scatter(mesh, count, radius, inner=0.0, scale=(0.8, 1.2), seed=1, z=0.0, loc=(0, 0), corridor=0.0, collision=False):
     # Instanced rendering needs the usage flag, or the asset-pack material falls back to the default checker.
     for slot in unreal.load_asset(mesh).static_materials:
         base = slot.material_interface.get_base_material() if slot.material_interface else None
         if base:
             unreal.MaterialEditingLibrary.set_material_usage(base, unreal.MaterialUsage.MATUSAGE_INSTANCED_STATIC_MESHES)
             eal.save_loaded_asset(base, False)
-    a = spawn(cls("MetaScatterField"), (0, 0, z), label=f"Scatter_{mesh.split('/')[-1]}")
-    for k, v in dict(mesh=unreal.load_asset(mesh), count=count, radius=radius, inner_radius=inner,
-                     scale_range=unreal.Vector2D(*scale), seed=seed).items():
+    a = spawn(cls("MetaScatterField"), (loc[0], loc[1], z), label=f"Scatter_{mesh.split('/')[-1]}_{seed}")
+    for k, v in dict(mesh=unreal.load_asset(mesh), count=count, radius=radius, inner_radius=inner, corridor_half_width=corridor,
+                     scale_range=unreal.Vector2D(*scale), seed=seed, collision=collision).items():
         a.set_editor_property(k, v)
     return a
 
@@ -258,10 +310,31 @@ def save_level():
 fresh_level("/Game/Maps/L_Title", "MetaTitleGameMode")
 save_level()
 
-# L_Prologue_FlowerField: moonlit white flower field (spec 4.1).
+# L_Prologue_FlowerField (4.1, user revision): moonlit flower field → 3 fake minions → ~15 s ruined avenue → small ruin
+# dungeon where the fake boss is summoned. Everything is Infinity Blade GrassLands. +X is forward.
+GL = "/Game/InfinityBladeGrassLands/Environments/"
+RUIN, FLORA, ORG, STAT, FLOOR = (GL + "Plains/Env_Plains_Ruins/StaticMesh/", GL + "Plains/Env_Plains_Flora/StaticMesh/",
+                                 GL + "Plains/Env_Plains_Organic/StaticMesh/", GL + "Plains/Env_Plains_Statues/StaticMesh/",
+                                 GL + "Plains/Env_Plains_Floors/StaticMesh/")
+EXO1, EXO2, EARTH = GL + "Misc/Exo_Deco01/StaticMesh/", GL + "Misc/Exo_Deco02/StaticMesh/", GL + "Earth/StaticMesh/"
+
+
+def place(mesh, loc, yaw=0.0, scale=1.0, label=None):
+    s = scale if isinstance(scale, tuple) else (scale, scale, scale)
+    return mesh_actor(mesh, loc, rot=(0, 0, yaw), scale=s, label=label or mesh.split("/")[-1])
+
+
+def torch_light(loc, intensity=60.0, radius=1100.0):  # candela
+    l = spawn(unreal.PointLight, loc, label="TorchLight")
+    l.light_component.set_light_color(unreal.LinearColor(1.0, 0.55, 0.2, 1.0))
+    l.light_component.set_intensity(intensity)
+    l.light_component.set_editor_property("attenuation_radius", radius)
+    l.light_component.set_cast_shadows(False)
+
+
 fresh_level("/Game/Maps/L_Prologue_FlowerField", "MetaGameMode")
-mesh_actor("/Engine/BasicShapes/Plane", (0, 0, 0), scale=(120, 120, 1), label="Ground",
-           material="/Game/InfinityBladeGrassLands/Environments/Plains/Env_Plains_Terrain/Materials/M_Grass01")
+mesh_actor("/Engine/BasicShapes/Plane", (3000, 0, 0), scale=(280, 160, 1), label="Ground",
+           material=GL + "Plains/Env_Plains_Terrain/Materials/M_Grass01")
 moon = spawn(unreal.DirectionalLight, (0, 0, 1000), rot=(0, -28, 40), label="Moonlight")
 moon.light_component.set_intensity(1.5)
 moon.light_component.set_light_color(unreal.LinearColor(0.55, 0.65, 1.0, 1.0))
@@ -270,21 +343,102 @@ sl = spawn(unreal.SkyLight, (0, 0, 500), label="SkyLight")
 sl.light_component.set_intensity(0.6)
 sl.light_component.set_editor_property("real_time_capture", True)
 spawn(unreal.ExponentialHeightFog, (0, 0, 0), label="Fog")
-scatter("/Game/InfinityBladeIceLands/Environments/Ice/DR_Ice_Mountain/StaticMesh/SM_Snowy_Flowers", 1400, 5000, 0, (0.35, 0.6), 3)
-for i, n in enumerate(("01", "02", "03", "04")):
-    scatter(f"/Game/InfinityBladeGrassLands/Environments/Plains/Env_Plains_Flora/StaticMesh/SM_Plains_Flowers{n}", 200, 5000, 0, (0.4, 0.7), 10 + i)
-scatter("/Game/InfinityBladeGrassLands/Environments/Plains/Env_Plains_Flora/StaticMesh/SM_Plains_Grass01", 400, 5500, 0, (0.2, 0.35), 20)
+
+# --- Flower fields (kept clear on the road) ---
+for center, seed in (((-1800, 0), 3), ((2400, 0), 4)):
+    scatter("/Game/InfinityBladeIceLands/Environments/Ice/DR_Ice_Mountain/StaticMesh/SM_Snowy_Flowers", 1000, 3800, 0, (0.35, 0.6), seed, loc=center, corridor=420)
+    for i, n in enumerate(("01", "02", "03", "04")):
+        scatter(FLORA + f"SM_Plains_Flowers{n}", 140, 3800, 0, (0.4, 0.7), seed * 10 + i, loc=center, corridor=420)
+    scatter(FLORA + "SM_Plains_Grass01", 300, 4000, 0, (0.2, 0.35), seed * 10 + 5, loc=center, corridor=420)
+    scatter(FLORA + "SM_Plains_Fern02", 120, 4000, 0, (0.4, 0.7), seed * 10 + 6, loc=center, corridor=500)
+# --- Trees, rocks, distant cliffs ---
+scatter(EARTH + "SM_Cherry_Tree", 70, 8500, 1500, (0.9, 1.5), 41, loc=(2500, 0), corridor=1500)
+scatter(FLORA + "SM_Plains_Tree01", 45, 9000, 2000, (0.8, 1.2), 42, loc=(2500, 0), corridor=1800)
+scatter(ORG + "SM_Plains_LargeRock01", 22, 9500, 2500, (0.6, 1.2), 43, loc=(2500, 0), corridor=1800, collision=True)
+scatter(ORG + "SM_Plains_SmallRock01", 40, 9000, 1200, (0.4, 0.9), 44, loc=(2500, 0), corridor=900, collision=True)
+for x, y, yaw, s in ((17000, 0, 0, 4.0), (12000, 8000, 60, 3.5), (12000, -8000, -60, 3.5), (2000, 9500, 90, 4.0),
+                     (2000, -9500, -90, 4.0), (-9500, 6000, 150, 3.0), (-9500, -6000, -150, 3.0)):
+    place(ORG + "SM_Plains_LargeRock_SpireLOD", (x, y, 0), yaw, s)
+
+# --- Start: fountain and angel statues behind the hero ---
+place(RUIN + "SM_Plains_Castle_Fountain_01", (-3700, 0, 0))
+place(STAT + "SM_Plains_Angel_Statue_01", (-3200, 700, 0), -90)
+place(STAT + "SM_Plains_Angel_Statue_01", (-3200, -700, 0), 90)
 spawn(unreal.PlayerStart, (-2600, 0, 120), label="PlayerStart")
-boss = spawn(boss_class, (900, 0, 120), rot=(0, 180, 0), label="FakeBoss_Elbern")
-trigger = spawn(cls("EncounterTriggerBox"), (900, 0, 120), scale=(30, 30, 6), label="Trigger_P1")
-trigger.set_editor_property("encounter_id", "P1")
-trigger.set_editor_property("bosses", [boss])
-holy = spawn(unreal.PointLight, (900, 0, 700), label="HolyLight")
+
+# --- Fake minions (3x Khaimera) right ahead ---
+minions = [spawn(minion_class, (-900, y, 120), rot=(0, 0, 180), label=f"FakeMinion_{i}") for i, y in enumerate((-380, 0, 380))]
+t_min = spawn(cls("EncounterTriggerBox"), (-1100, 0, 120), scale=(25, 25, 6), label="Trigger_P1_Minions")
+t_min.set_editor_property("encounter_id", "P1_Minions")
+t_min.set_editor_property("bosses", minions)
+place(RUIN + "SM_Plains_Column_Small_Broken_01", (-700, 900, 0), 20)
+place(RUIN + "SM_Plains_Column_Large_Broken_02", (-1300, -1000, 0), 120)
+place(EXO1 + "SM_Exo_Cart_Damaged", (-1500, 1100, 0), 70)
+
+# --- Ruined avenue (x 0..6000, ~15 s at walk speed): stone road, columns, torches, arches, statues, debris ---
+for k in range(9):
+    place(FLOOR + "SM_Plains_Floors_Flat02", (386 + 772 * k, 0, 1), 0, (1.0, 1.05, 1.0))
+columns = ["SM_Plains_Column_Small_01", "SM_Plains_Column_Small_Broken_01", "SM_Plains_Column_Small_01", "SM_Plains_Column_Small_Broken_02"]
+for k, x in enumerate(range(400, 6000, 900)):
+    for side in (1, -1):
+        place(RUIN + columns[(k + (side > 0)) % 4], (x, side * 640, 0), 0 if side > 0 else 180)
+    if k % 2 == 0:
+        for side in (1, -1):
+            place(RUIN + "SM_Plains_CastleArch_Iron_Torch_01", (x + 450, side * 560, 0))
+            torch_light((x + 450, side * 560, 260))
+for x, s in ((1500, 2.2), (3600, 2.2), (5400, 2.0)):
+    place(RUIN + "SM_Plains_CastleArch_02", (x, 588 * s / 2 - 6 * s, 0), 90, s)  # spans the road (local X → world Y)
+for x, side, yaw in ((2500, 1, -90), (2500, -1, 90)):
+    place(STAT + "SM_Plains_Man_Statue_01_torch", (x, side * 900, 0), yaw)
+    torch_light((x, side * 900, 450), 40.0)
+for x, side, yaw in ((4400, 1, -90), (4400, -1, 90)):
+    place(STAT + "SM_Plains_Angel_Statue_01", (x, side * 950, 0), yaw)
+for x, y, yaw, mesh in ((1000, 1500, 10, "SM_Plains_CastleWall_Ruin_01"), (2000, -1600, 170, "SM_Plains_CastleWall_Ruin_02"),
+                        (3100, 1700, -15, "SM_Plains_CastleWall_Ruin_03"), (4800, -1500, 190, "SM_Plains_CastleWall_Ruin_01"),
+                        (3000, 2700, 30, "SM_Plains_CastleTower_Ruin_02"), (5600, -2500, -20, "SM_Plains_CastleTower_Ruin_01"),
+                        (1800, 2400, 0, "SM_Plains_Column_Large_Broken_01"), (4000, -2300, 60, "SM_Plains_Column_Large_Broken_03")):
+    place(RUIN + mesh, (x, y, 0), yaw)
+for x, y, yaw, mesh in ((900, -900, 30, EXO1 + "SM_WoodenBarrel_Damaged"), (950, -1000, 0, EXO1 + "SM_WoodenBarrel_Intact"),
+                        (3300, 950, 80, EXO1 + "SM_Exo_Crate_Open_Damaged"), (4900, 900, 10, EXO1 + "SM_Exo_Hay"),
+                        (2100, -950, 0, ORG + "SM_Plains_LargeRock_Pile01"), (5800, -1000, 45, EXO2 + "SM_Exo_Stone01_Group")):
+    place(mesh, (x, y, 0), yaw)
+
+# --- Dungeon: walled ruin courtyard (x 6300..8940, y ±1300), entrance arch on the road ---
+DX0, DX1, DY = 6300, 8940, 1300
+place(FLOOR + "SM_Plains_Floors_Flat01", ((DX0 + DX1) / 2, 0, 2), 0, (1.16, 1.14, 1.0))
+for k in range(5):
+    place(RUIN + "SM_Plains_Wall_Straight_01", (DX1 + 40, DY - 528 * k, 0))                     # back wall, runs -Y
+    for side in (1, -1):
+        place(RUIN + "SM_Plains_Wall_Straight_01", (DX0 + 528 * k, side * (DY + 40), 0), 90)     # side walls, run +X
+for y in (DY, DY - 372, -420, -792):
+    place(RUIN + "SM_Plains_Wall_Straight_01", (DX0 - 40, y, 0))                                # front wall, gap |y| < 400
+place(RUIN + "SM_Plains_CastleArch_02", (DX0 - 20, 588 * 1.4 / 2 - 8, 0), 90, 1.4)              # entrance arch
+place(RUIN + "SM_Plains_CastleArch_Iron_Gate_01_Broken", (DX0 - 60, 520, 0), 90)
+for x in (6900, 8300):
+    for side in (1, -1):
+        place(RUIN + "SM_Plains_Column_Large_01", (x + 115, side * 800 + 64, 0))
+place(STAT + "SM_Plains_Angel_Statue_01", (DX1 - 250, 0, 0), 180, 1.3)
+for side in (1, -1):
+    place(STAT + "SM_Plains_Man_Statue_01_torch", (DX1 - 250, side * 850, 0), 180)
+    torch_light((DX1 - 300, side * 850, 450), 60.0, 1600.0)
+    place(RUIN + "SM_Plains_CastleArch_Iron_Torch_01", (DX0 + 250, side * 1050, 0))
+    torch_light((DX0 + 250, side * 1050, 260), 60.0, 1400.0)
+for x, y, yaw, mesh in ((6600, 1150, 0, EXO2 + "SM_Exo_CobWeb03"), (8700, -1150, 90, EXO2 + "SM_Exo_CobWeb03"),
+                        (7000, -1000, 40, FLOOR + "SM_Plains_Floors_Rubble"), (8000, 1000, 160, FLOOR + "SM_Plains_Floors_Rubble02"),
+                        (7500, 1100, 0, EXO2 + "SM_Exo_Stone01_Group"), (8500, 600, 30, EXO1 + "SM_WoodenBarrel_Destroyed")):
+    place(mesh, (x, y, 3), yaw)
+boss = spawn(boss_class, (8300, 0, 130), rot=(0, 0, 180), label="FakeBoss_Elbern")
+t_boss = spawn(cls("EncounterTriggerBox"), (7600, 0, 120), scale=(16, 16, 6), label="Trigger_P1")
+t_boss.set_editor_property("encounter_id", "P1")
+t_boss.set_editor_property("bosses", [boss])
+
+# --- Story actors ---
+holy = spawn(unreal.PointLight, (8300, 0, 700), label="HolyLight")
 holy.light_component.set_light_color(unreal.LinearColor(0.95, 0.82, 0.48, 1.0))  # #F2D27A
 holy.light_component.set_editor_property("attenuation_radius", 4000.0)
 holy.light_component.set_intensity(0.0)
 holy.tags = ["HolyLight"]
-crack_plane = mesh_actor("/Engine/BasicShapes/Plane", (5000, 0, 3800), rot=(90, 0, -90), scale=(70, 70, 1), label="SkyCrack",
+crack_plane = mesh_actor("/Engine/BasicShapes/Plane", (14000, 0, 4000), rot=(90, 0, -90), scale=(95, 95, 1), label="SkyCrack",
                          material="/Game/Core/Materials/M_SkyCrack")
 crack_plane.static_mesh_component.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
 crack_plane.tags = ["SkyCrack"]

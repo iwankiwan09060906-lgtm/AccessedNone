@@ -52,8 +52,18 @@ bgm_path = write_wav("SW_BGM_Prologue", bgm)
 click = [(random.uniform(-1, 1) * 0.6 + math.sin(2 * math.pi * 2400 * i / RATE)) * math.exp(-i / (RATE * 0.004)) for i in range(int(RATE * 0.025))]
 click_path = write_wav("SW_KeyClick", click)
 
+# --- Explosion (phase 4): noise burst + falling low rumble, 3.5 s ---
+boom = []
+lp = 0.0
+for i in range(int(RATE * 3.5)):
+    t = i / RATE
+    lp += (random.uniform(-1, 1) - lp) * 0.06  # low-passed noise = rumble
+    sub = math.sin(2 * math.pi * (55 - 30 * min(t, 1.0)) * t)
+    boom.append((lp * 3.0 + sub * 0.8 + random.uniform(-1, 1) * math.exp(-t * 18)) * math.exp(-t * 1.3))
+boom_path = write_wav("SW_Explosion", boom)
+
 tasks = []
-for p in (bgm_path, click_path):
+for p in (bgm_path, click_path, boom_path):
     t = unreal.AssetImportTask()
     t.set_editor_property("filename", p)
     t.set_editor_property("destination_path", "/Game/Audio")
