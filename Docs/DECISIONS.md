@@ -91,3 +91,8 @@
 | 2026-11-14 | (사용자 지시) HUD = 좌하단: HP 바(오른쪽에 물약 아이콘 3개 + 개수, 사용한 물약은 빈 병) + 스태미나 바, 흐려지는 검은 배경. 바는 금빛 테두리 + 피해 잔상(Trail). FP 바 제거. 튜토리얼은 왼쪽 중앙, 보스 바는 하단 중앙 위쪽. 회복약은 기존대로 최대 3개(`HealFlaskMax`), 브레이크포인트에서만 충전 | "체력·스태미나·회복 아이템을 왼쪽 아래" |
 | 2026-11-14 | (사용자 지시) 타이틀 = `L_Title`에 달밤 폐허(아치·천사상·꽃·벚나무) 3D 배경 + `TitleCamera`, 비네트, 자간 넓힌 금색 제목과 장식선, 하단 어두운 띠 위 텍스트 메뉴(호버 시 금빛 띠), 타이틀 BGM | "게임 시작 UI를 분위기에 맞게" |
 | 2026-11-14 | UI 텍스처(`T_UI_GradientH/GradientCenter/Vignette/Flask`)는 스크립트가 PNG로 생성 (`/Game/UI/Textures`) | 외부 에셋 없이 재생성 가능 |
+| 2026-11-14 | (사용자 지시) 적 사망 = `UBossDataAsset.DeathAnim` 단일 노드 재생(마지막 프레임 유지) → 모션 길이 + `VanishDelay`(2초) 뒤 숨김·충돌 해제. 인카운터 리셋(Dormant) 시 다시 나타남. 잡몹 Khaimera `Death_A`, 엘베른/샌드박스 Narbash `Death_Fwd` | "쓰러지는 모션 후 2초 뒤 사라짐". Destroy 대신 숨김: 트리거·리셋이 액터 참조를 유지 |
+| 2026-11-14 | (사용자 지시) `L_Dev_Sandbox` 보스 = 허수아비(`bTrainingDummy`): 패턴·이동 없음, 기믹(감마)과 감쇄는 그대로, 사라진 뒤 1.5초에 부활해 인카운터 재시작(`UEncounterSubsystem::RestartEncounter`) | 타격 연습용. 부활이 없으면 한 번 처치 후 연습할 대상이 없음 |
+| 2026-11-14 | 버그 수정: 보스 리셋의 `RemoveLooseGameplayTag(Tag, -1)` → `SetLooseGameplayTagCount(Tag, 0)` | 음수 개수는 태그를 제거하지 않고 추가해, 리셋된 보스가 계속 '사망' 상태였음 (허수아비 부활 테스트에서 발견) |
+| 2026-11-14 | (사용자 지시) 공격 사거리: 1·4번 = 박스 100 / 오프셋 120, 3번 = 박스 130 / 오프셋 165(약간 김), 2번 = 원거리. 기존 궁수 긴 히트박스 임시안 폐기 | 캐릭터별 차이 |
+| 2026-11-14 | (사용자 지시) 2번(Sparrow) 화살 = `AMetaProjectile`(직선, 6000cm/s, 1.5초, GE_Damage = AttackPower × MotionValue). 조준점 = 락온 대상 또는 화면 중앙 트레이스(최대 40m). 화면 중앙 십자선(적 위면 붉은색) + 조준 지점 지면 마커(Paragon `P_RainArrowsTarget`), 궁수일 때 어깨 너머 카메라. 약/강공격 궤적 FX는 Paragon Sparrow 기본/궁극기 화살 | "타격점을 보여주어서 공격". `AMetaProjectile`은 7.3의 S5 클래스를 앞당겨 최소 구현 (S5에서 `Bounded.InMap` 확장) |

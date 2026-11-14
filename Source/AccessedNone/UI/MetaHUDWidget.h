@@ -63,6 +63,7 @@ private:
 	UPROPERTY() TObjectPtr<UTextBlock> FlaskText;
 	UPROPERTY() TObjectPtr<UMetaBossBarWidget> BossBar;
 	UPROPERTY() TObjectPtr<UTextBlock> ToastText;
+	UPROPERTY() TObjectPtr<UTextBlock> Crosshair;
 	UPROPERTY() TObjectPtr<UTextBlock> BannerText;
 	UPROPERTY() TObjectPtr<UVerticalBox> LogBox;
 	UPROPERTY() TObjectPtr<UBorder> TutorialBox;

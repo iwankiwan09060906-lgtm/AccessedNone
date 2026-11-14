@@ -56,7 +56,16 @@ void UGA_MeleeAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, c
 
 void UGA_MeleeAttack::OnActiveStart()
 {
-	Sweep();
+	AMetaPlayerCharacter* Character = GetPlayerCharacter();
+	if (Character && Character->IsRanged())
+	{
+		const FAttackParams P = GetParams();
+		Character->FireProjectile(P.MotionValue, P.DamageType, P.DamageType == MetaTags::Damage_Type_Heavy);
+	}
+	else
+	{
+		Sweep();
+	}
 	UAbilityTask_WaitDelay* Wait = UAbilityTask_WaitDelay::WaitDelay(this, GetParams().Active);
 	Wait->OnFinish.AddDynamic(this, &UGA_MeleeAttack::OnActiveEnd);
 	Wait->ReadyForActivation();
@@ -65,7 +74,10 @@ void UGA_MeleeAttack::OnActiveStart()
 void UGA_MeleeAttack::OnActiveEnd()
 {
 	// shortcut: sweeps at the start and end of the active window only; upgrade to per-tick sweeps if fast targets slip through.
-	Sweep();
+	if (const AMetaPlayerCharacter* Character = GetPlayerCharacter(); !Character || !Character->IsRanged())
+	{
+		Sweep();
+	}
 	UAbilityTask_WaitDelay* Wait = UAbilityTask_WaitDelay::WaitDelay(this, GetParams().Recovery);
 	Wait->OnFinish.AddDynamic(this, &UGA_MeleeAttack::OnRecoveryEnd);
 	Wait->ReadyForActivation();

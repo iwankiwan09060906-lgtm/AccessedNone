@@ -8,6 +8,8 @@
 #include "Meta/EncounterSubsystem.h"
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"
+#include "Characters/MetaProjectile.h"
+#include "Particles/ParticleSystemComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -43,6 +45,12 @@ AMetaPlayerCharacter::AMetaPlayerCharacter()
 
 	Hitbox = CreateDefaultSubobject<UMeleeHitboxComponent>(TEXT("Hitbox"));
 	Hitbox->SetupAttachment(RootComponent);
+
+	AimMarker = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("AimMarker"));
+	AimMarker->SetupAttachment(RootComponent);
+	AimMarker->SetUsingAbsoluteLocation(true);
+	AimMarker->SetUsingAbsoluteRotation(true);
+	AimMarker->bAutoActivate = false;
 
 	GetMesh()->SetRelativeLocationAndRotation(FVector(0.f, 0.f, -97.f), FRotator(0.f, -90.f, 0.f));
 	// E5 letterbox silhouette (spec 8.9).
@@ -88,6 +96,8 @@ void AMetaPlayerCharacter::SetHero(int32 Index)
 	SuppressIntroMontages();
 	AttackExtent = H.AttackExtent;
 	AttackOffset = H.AttackOffset;
+	// Over-the-shoulder view for the archer so the crosshair and target marker aren't hidden by her back.
+	CameraBoom->SocketOffset = H.bRanged ? FVector(0.f, 70.f, 45.f) : FVector::ZeroVector;
 }
 
 void AMetaPlayerCharacter::Tick(float DeltaSeconds)
@@ -96,6 +106,95 @@ void AMetaPlayerCharacter::Tick(float DeltaSeconds)
 	TickStamina(DeltaSeconds);
 	TickLockOn(DeltaSeconds);
 	TickRoll(DeltaSeconds);
+	TickAim();
+}
+
+const FHeroDef* AMetaPlayerCharacter::GetHeroDef() const
+{
+	const TArray<FHeroDef>& Heroes = UAccessedNoneSettings::Get().Heroes;
+	return Heroes.IsValidIndex(HeroIndex) ? &Heroes[HeroIndex] : nullptr;
+}
+
+bool AMetaPlayerCharacter::IsRanged() const
+{
+	const FHeroDef* H = GetHeroDef();
+	return H && H->bRanged;
+}
+
+FVector AMetaPlayerCharacter::GetAimPoint(AActor*& OutTarget, bool& bOutHit) const
+{
+	OutTarget = nullptr;
+	bOutHit = false;
+	if (LockOnTarget.IsValid())
+	{
+		OutTarget = LockOnTarget.Get();
+		bOutHit = true;
+		return OutTarget->GetActorLocation();
+	}
+	const float Range = GetHeroDef() ? GetHeroDef()->AimRange : 4000.f;
+	const FVector Start = FollowCamera->GetComponentLocation();
+	const FVector End = Start + FollowCamera->GetForwardVector() * (Range + CameraBoom->TargetArmLength);
+	FHitResult Hit;
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(Aim), false, this);
+	if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params) || GetWorld()->LineTraceSingleByObjectType(Hit, Start, End, FCollisionObjectQueryParams(ECC_Pawn), Params))
+	{
+		bOutHit = true;
+		if (const AMetaCharacterBase* C = Cast<AMetaCharacterBase>(Hit.GetActor()); C && !C->IsDead() && !C->IsHidden())
+		{
+			OutTarget = Hit.GetActor();
+		}
+		return Hit.ImpactPoint;
+	}
+	return End;
+}
+
+void AMetaPlayerCharacter::TickAim()
+{
+	const FHeroDef* H = GetHeroDef();
+	const bool bShow = H && H->bRanged && !IsDead();
+	if (!bShow)
+	{
+		if (AimMarker->IsActive()) { AimMarker->Deactivate(); }
+		return;
+	}
+	if (!AimMarker->IsActive())
+	{
+		AimMarker->SetTemplate(H->AimMarkerFX.LoadSynchronous());
+		AimMarker->Activate(true);
+	}
+	AActor* Target = nullptr;
+	bool bHit = false;
+	const FVector Point = GetAimPoint(Target, bHit);
+	AimMarker->SetVisibility(bHit);
+	// On an enemy the marker sits at its feet so it reads as "this one gets hit".
+	AimMarker->SetWorldLocation(Target ? Target->GetActorLocation() - FVector(0, 0, 90.f) : Point);
+}
+
+void AMetaPlayerCharacter::FireProjectile(float MotionValue, FGameplayTag DamageType, bool bHeavy)
+{
+	const FHeroDef* H = GetHeroDef();
+	if (!H)
+	{
+		return;
+	}
+	AActor* Target = nullptr;
+	bool bHit = false;
+	const FVector Aim = GetAimPoint(Target, bHit);
+	const FVector Muzzle = GetActorLocation() + GetActorForwardVector() * 60.f + FVector(0, 0, 40.f);
+	const FVector Dir = (Aim - Muzzle).GetSafeNormal();
+	if (!IsLockedOn())
+	{
+		SetActorRotation(FRotator(0.f, Dir.Rotation().Yaw, 0.f)); // turn to the shot
+	}
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = this;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	if (AMetaProjectile* Arrow = GetWorld()->SpawnActor<AMetaProjectile>(AMetaProjectile::StaticClass(), Muzzle, Dir.Rotation(), SpawnParams))
+	{
+		Arrow->Launch(AbilitySystem, Dir, H->ProjectileSpeed, MotionValue, DamageType,
+			(bHeavy ? H->HeavyProjectileFX : H->ProjectileFX).LoadSynchronous(), H->HitFX.LoadSynchronous());
+	}
 }
 
 void AMetaPlayerCharacter::StartRollVisual(const FVector& WorldDir, float Seconds)

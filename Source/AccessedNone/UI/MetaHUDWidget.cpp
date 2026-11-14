@@ -100,6 +100,11 @@ TSharedRef<SWidget> UMetaHUDWidget::RebuildWidget()
 		BannerText->SetJustification(ETextJustify::Center);
 		Place(Canvas, BannerText, FVector2D(0.5f, 0.42f), FVector2D(0.5f, 0.5f), FVector2D::ZeroVector);
 
+		Crosshair = MetaUI::Text(WidgetTree, FText::FromString(TEXT("+")), 30, FLinearColor(1.f, 1.f, 1.f, 0.85f), TEXT("Bold"));
+		Crosshair->SetShadowOffset(FVector2D(1.f, 1.f));
+		Crosshair->SetVisibility(ESlateVisibility::Collapsed);
+		Place(Canvas, Crosshair, FVector2D(0.5f, 0.5f), FVector2D(0.5f, 0.5f), FVector2D::ZeroVector);
+
 		ToastText = MetaUI::Text(WidgetTree, FText::GetEmpty(), 26, MetaUI::Error);
 		Place(Canvas, ToastText, FVector2D(0.5f, 0.18f), FVector2D(0.5f, 0.5f), FVector2D::ZeroVector);
 
@@ -228,7 +233,7 @@ void UMetaHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	Super::NativeTick(MyGeometry, InDeltaTime);
 	const double Now = MetaUI::Now();
 
-	if (const AMetaPlayerCharacter* P = Cast<AMetaPlayerCharacter>(GetOwningPlayerPawn()))
+	if (AMetaPlayerCharacter* P = Cast<AMetaPlayerCharacter>(GetOwningPlayerPawn()))
 	{
 		const UMetaCombatAttributeSet* A = P->GetAttributes();
 		const float HP = A->GetMaxHealth() > 0.f ? A->GetHealth() / A->GetMaxHealth() : 0.f;
@@ -237,6 +242,15 @@ void UMetaHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 		StaminaBar->SetPercent(SP);
 		HealthTrail->SetPercent(MetaUI::StepTrail(HealthTrail->GetPercent(), HP, InDeltaTime, HealthTrailHold));
 		StaminaTrail->SetPercent(MetaUI::StepTrail(StaminaTrail->GetPercent(), SP, InDeltaTime, StaminaTrailHold));
+		const bool bAim = P->IsRanged() && !P->IsDead() && bStatusVisible;
+		Crosshair->SetVisibility(bAim ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+		if (bAim)
+		{
+			AActor* Target = nullptr;
+			bool bHit = false;
+			P->GetAimPoint(Target, bHit);
+			Crosshair->SetColorAndOpacity(FSlateColor(Target ? MetaUI::Error : FLinearColor(1.f, 1.f, 1.f, 0.85f)));
+		}
 		const int32 Flasks = P->GetHealFlaskCount();
 		FlaskText->SetText(FText::Format(FText::FromString(TEXT("x{0}")), FText::AsNumber(Flasks)));
 		for (int32 i = 0; i < FlaskIcons.Num(); ++i)

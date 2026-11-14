@@ -13,6 +13,8 @@
 #include "Core/MetaPlayerController.h"
 #include "Meta/EncounterSubsystem.h"
 #include "Meta/MetaSettingsSubsystem.h"
+#include "Combat/MetaGameplayEffects.h"
+#include "UnrealClient.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -122,6 +124,121 @@ bool FSandboxBossFlowTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("boss Defeated on 10th hit"), S->Boss->GetGimmick()->GetState(), EGimmickState::Defeated);
 		TestFalse(TEXT("encounter over"), S->World->GetSubsystem<UEncounterSubsystem>()->IsInCombatEncounter());
 	}, SwingTime));
+	return true;
+}
+
+#endif
+
+#if WITH_DEV_AUTOMATION_TESTS
+
+/**
+ * User revision: the sandbox boss is a practice dummy (no attacks, dies with a motion, vanishes 2 s later, revives),
+ * hero reach (1 = 4 < 3) and hero 2 shooting arrows at the aim point.
+ *   UnrealEditor AccessedNone.uproject /Game/Maps/L_Dev_Sandbox -game -windowed -resx=1280 -resy=720
+ *     -ExecCmds="Automation RunTests AccessedNone.Sandbox.Practice; Quit"
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSandboxPracticeTest, "AccessedNone.Sandbox.Practice",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::ProductFilter)
+bool FSandboxPracticeTest::RunTest(const FString& Parameters)
+{
+	struct FState
+	{
+		TWeakObjectPtr<UWorld> World;
+		TWeakObjectPtr<AMetaPlayerController> PC;
+		TWeakObjectPtr<AMetaPlayerCharacter> Player;
+		TWeakObjectPtr<AMetaBossBase> Boss;
+		FVector BossSpawn;
+		float PlayerHP = 0.f;
+		float BossHP = 0.f;
+	};
+	// Paragon asset-pack Blueprints fail to compile on 5.8 (pre-existing, see DECISIONS.md).
+	AddExpectedError(TEXT("ResetOrientationAndPosition"), EAutomationExpectedErrorFlags::Contains, 0);
+	TSharedRef<FState> S = MakeShared<FState>();
+	for (const FWorldContext& Ctx : GEngine->GetWorldContexts())
+	{
+		if (Ctx.WorldType == EWorldType::Game && Ctx.World()) { S->World = Ctx.World(); }
+	}
+	if (!S->World.IsValid() || !S->World->GetMapName().Contains(TEXT("L_Dev_Sandbox")))
+	{
+		AddError(TEXT("Run this inside L_Dev_Sandbox with -game"));
+		return false;
+	}
+	S->PC = Cast<AMetaPlayerController>(UGameplayStatics::GetPlayerController(S->World.Get(), 0));
+	S->Player = Cast<AMetaPlayerCharacter>(UGameplayStatics::GetPlayerPawn(S->World.Get(), 0));
+	TActorIterator<AMetaBossBase> BossIt(S->World.Get());
+	S->Boss = BossIt ? *BossIt : nullptr;
+	if (!S->PC.IsValid() || !S->Player.IsValid() || !S->Boss.IsValid())
+	{
+		AddError(TEXT("Sandbox needs the player and the dummy"));
+		return false;
+	}
+
+	// Reach: heroes 1 and 4 match, hero 3 reaches further, hero 2 is ranged.
+	const TArray<FHeroDef>& Heroes = UAccessedNoneSettings::Get().Heroes;
+	TestEqual(TEXT("hero 1 reach == hero 4"), Heroes[0].AttackOffset.X + Heroes[0].AttackExtent.X, Heroes[3].AttackOffset.X + Heroes[3].AttackExtent.X);
+	TestTrue(TEXT("hero 3 reaches further"), Heroes[2].AttackOffset.X + Heroes[2].AttackExtent.X > Heroes[0].AttackOffset.X + Heroes[0].AttackExtent.X);
+	TestTrue(TEXT("hero 2 ranged"), Heroes[1].bRanged);
+
+	// Dummy: stands still and never hurts the player.
+	S->BossSpawn = S->Boss->GetActorLocation();
+	const FVector Stand = S->BossSpawn + S->Boss->GetActorForwardVector() * 180.f;
+	S->Player->SetActorLocation(FVector(Stand.X, Stand.Y, S->Player->GetActorLocation().Z), false, nullptr, ETeleportType::TeleportPhysics);
+	S->PlayerHP = S->Player->GetHealth();
+	S->PC->AN_Encounter();
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, S]()
+	{
+		TestEqual(TEXT("dummy did not attack"), S->Player->GetHealth(), S->PlayerHP);
+		TestTrue(TEXT("dummy did not move"), FVector::Dist2D(S->Boss->GetActorLocation(), S->BossSpawn) < 10.f);
+		TestEqual(TEXT("dummy in combat state"), S->Boss->GetGimmick()->GetState(), EGimmickState::Armored);
+
+		// Hero 2: back off, lock on, shoot.
+		S->Player->SetHero(1);
+		const FVector Back = S->BossSpawn + S->Boss->GetActorForwardVector() * 1000.f;
+		S->Player->SetActorLocation(FVector(Back.X, Back.Y, S->Player->GetActorLocation().Z), false, nullptr, ETeleportType::TeleportPhysics);
+		S->Player->SetActorRotation((S->BossSpawn - Back).GetSafeNormal2D().Rotation());
+		S->PC->SetControlRotation((S->BossSpawn - Back).GetSafeNormal2D().Rotation());
+	}, 3.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([S]()
+	{
+		FScreenshotRequest::RequestScreenshot(TEXT("Practice_Aim"), true, false);
+		S->BossHP = S->Boss->GetHealth();
+		S->Player->ActivateAbility(UGA_LightAttack::StaticClass());
+	}, 1.5f));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, S]()
+	{
+		FScreenshotRequest::RequestScreenshot(TEXT("Practice_Arrow"), true, false);
+		TestTrue(TEXT("arrow hit the dummy from 10 m"), S->Boss->GetHealth() < S->BossHP);
+		// Kill it: death motion, then vanish, then revive.
+		UAbilitySystemComponent* Src = S->Player->GetAbilitySystemComponent();
+		const FGameplayEffectSpecHandle Spec = Src->MakeOutgoingSpec(UGE_InstantKill::StaticClass(), 1.f, Src->MakeEffectContext());
+		Src->ApplyGameplayEffectSpecToTarget(*Spec.Data, S->Boss->GetAbilitySystemComponent());
+		TestTrue(TEXT("dummy dead"), S->Boss->IsDead());
+	}, 1.0f));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, S]()
+	{
+		FScreenshotRequest::RequestScreenshot(TEXT("Practice_Death"), true, false);
+		TestFalse(TEXT("body still there right after dying"), S->Boss->IsHidden());
+	}, 0.8f));
+	// Vanish (motion + 2 s) and revive (+1.5 s) depend on the death clip length: poll with timeouts.
+	auto Poll = [this](const FString& What, double Timeout, TFunction<bool()> Cond)
+	{
+		TSharedRef<double> Start = MakeShared<double>(-1.0);
+		ADD_LATENT_AUTOMATION_COMMAND(FFunctionLatentCommand([this, What, Timeout, Cond, Start]()
+		{
+			if (*Start < 0.0) { *Start = FPlatformTime::Seconds(); }
+			if (Cond()) { return true; }
+			if (FPlatformTime::Seconds() - *Start > Timeout) { AddError(TEXT("Timed out: ") + What); return true; }
+			return false;
+		}));
+	};
+	Poll(TEXT("dummy vanishes"), 10.0, [S]() { return S->Boss->IsHidden(); });
+	Poll(TEXT("dummy revives"), 5.0, [S]() { return !S->Boss->IsHidden(); });
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, S]()
+	{
+		TestFalse(TEXT("revived alive"), S->Boss->IsDead());
+		TestEqual(TEXT("revived into combat"), S->Boss->GetGimmick()->GetState(), EGimmickState::Armored);
+		FScreenshotRequest::RequestScreenshot(TEXT("Practice_Revived"), true, false);
+	}, 0.5f));
 	return true;
 }
 

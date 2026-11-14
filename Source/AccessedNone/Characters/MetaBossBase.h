@@ -31,6 +31,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Boss") TObjectPtr<UMeleeHitboxComponent> Hitbox;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Boss") TObjectPtr<UBossDataAsset> BossData;
 
+	/** Set by UEncounterSubsystem when this boss joins an encounter (training dummies restart it on revive). */
+	FName EncounterId;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void HandleDeath(const FGameplayEventData* Payload) override;
@@ -43,6 +46,13 @@ protected:
 
 private:
 	void RemoveStateEffects();
+	void PlayDeathAndVanish();
+	void Vanish();
+	void Revive();
+	void SetPresent(bool bPresent);
+	bool IsDummy() const;
+
+	FTimerHandle DeathTimer;
 
 	TWeakObjectPtr<AActor> EncounterTarget;
 	FTransform SpawnTransform;

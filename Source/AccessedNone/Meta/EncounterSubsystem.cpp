@@ -35,6 +35,7 @@ void UEncounterSubsystem::BeginEncounter(FName EncounterId, AMetaBossBase* Boss)
 	{
 		Boss->GetGimmick()->SetHintTier(Hints->GetTier(EncounterId));
 	}
+	Boss->EncounterId = EncounterId;
 	Boss->StartEncounter(UGameplayStatics::GetPlayerPawn(this, 0));
 
 	if (bFirst)
@@ -115,4 +116,10 @@ AMetaBossBase* UEncounterSubsystem::GetPrimaryBoss() const
 		}
 	}
 	return nullptr;
+}
+
+void UEncounterSubsystem::RestartEncounter(FName EncounterId, AMetaBossBase* Boss)
+{
+	Cleared.Remove(EncounterId);
+	BeginEncounter(EncounterId, Boss);
 }

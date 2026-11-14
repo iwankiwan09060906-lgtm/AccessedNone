@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Characters/MetaCharacterBase.h"
+#include "GameplayTagContainer.h"
 #include "MetaPlayerCharacter.generated.h"
 
 class USpringArmComponent;
@@ -33,6 +34,12 @@ public:
 	bool ActivateAbility(TSubclassOf<UGameplayAbility> AbilityClass);
 	/** Current hero's light combo step or heavy attack animation, stretched to the attack's duration. */
 	void PlayAttackMotion(bool bHeavy, float TotalSeconds);
+	// --- Ranged hero (Sparrow) ---
+	UFUNCTION(BlueprintPure, Category="Hero") bool IsRanged() const;
+	/** Where an arrow would land: the lock-on target, else the camera-center trace (≤ AimRange). OutTarget = combatant under the aim. */
+	FVector GetAimPoint(AActor*& OutTarget, bool& bOutHit) const;
+	void FireProjectile(float MotionValue, FGameplayTag DamageType, bool bHeavy);
+
 	/** Somersault the mesh along WorldDir over Seconds (the roll has no animation asset). */
 	void StartRollVisual(const FVector& WorldDir, float Seconds);
 
@@ -55,6 +62,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category="Camera") TObjectPtr<USpringArmComponent> CameraBoom;
 	UPROPERTY(VisibleAnywhere, Category="Camera") TObjectPtr<UCameraComponent> FollowCamera;
 	UPROPERTY(VisibleAnywhere, Category="Combat") TObjectPtr<UMeleeHitboxComponent> Hitbox;
+	/** Ground/enemy marker at the aim point while a ranged hero is active. */
+	UPROPERTY(VisibleAnywhere, Category="Combat") TObjectPtr<class UParticleSystemComponent> AimMarker;
 
 	UPROPERTY(EditDefaultsOnly, Category="Combat") TArray<TSubclassOf<UGameplayAbility>> DefaultAbilities;
 
@@ -65,6 +74,8 @@ private:
 	void TickStamina(float DeltaSeconds);
 	void TickLockOn(float DeltaSeconds);
 	void TickRoll(float DeltaSeconds);
+	void TickAim();
+	const struct FHeroDef* GetHeroDef() const;
 
 	TWeakObjectPtr<AActor> LockOnTarget;
 	int32 HealFlaskCount = 0;

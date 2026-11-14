@@ -302,7 +302,7 @@ def hero_path(hero, rel):
     return f"/Game/Paragon{hero}/Characters/Heroes/{hero}/{rel}"
 
 
-def boss_assets(folder, da_name, bp_name, hero, display_key, minion, hp_override, armored, vulnerable, scale=1.0):
+def boss_assets(folder, da_name, bp_name, hero, display_key, minion, hp_override, armored, vulnerable, scale=1.0, death=None):
     f = unreal.DataAssetFactory()
     f.set_editor_property("data_asset_class", cls("BossDataAsset"))
     path = f"{folder}/{da_name}"
@@ -317,6 +317,8 @@ def boss_assets(folder, da_name, bp_name, hero, display_key, minion, hp_override
     da.set_editor_property("mesh", unreal.load_asset(hero_path(hero, f"Meshes/{hero}")))
     da.set_editor_property("anim_class", unreal.load_class(None, hero_path(hero, f"{hero}_AnimBlueprint.{hero}_AnimBlueprint_C")))
     da.set_editor_property("mesh_scale", scale)
+    if death:
+        da.set_editor_property("death_anim", unreal.load_asset(hero_path(hero, f"Animations/{death}")))
     eal.save_loaded_asset(da, False)
     bp_path = f"{folder}/{bp_name}"
     if not eal.does_asset_exist(bp_path):
@@ -336,12 +338,12 @@ NB = hero_path("Narbash", "Animations/")
 minion_class = boss_assets("/Game/Characters/Bosses/Khaimera", "DA_Minion_Khaimera", "BP_FakeMinion_Khaimera", "Khaimera", "", True, 0.0,
                            [pattern("ClawA", 220.0, 0.7, 0.2, 0.9, 2.2, dmg, 1.0, KH + "Melee_A_Montage"),
                             pattern("ClawB", 220.0, 0.7, 0.2, 0.9, 2.6, dmg, 1.0, KH + "Melee_B_Montage"),
-                            pattern("ClawC", 240.0, 0.9, 0.2, 1.1, 3.5, dmg, 0.6, KH + "Melee_C_Montage")], [])
+                            pattern("ClawC", 240.0, 0.9, 0.2, 1.1, 3.5, dmg, 0.6, KH + "Melee_C_Montage")], [], death="Death_A")
 boss_class = boss_assets("/Game/Characters/Bosses/Elbern", "DA_Boss_Elbern", "BP_FakeBoss_Elbern", "Narbash", "OP_P1_BOSS_NAME", False,
                          tuning.get_editor_property("fake_boss_hp_multiplier"),
                          [pattern("Swing1", 280.0, 0.9, 0.2, 1.1, 2.4, dmg, 2.0, NB + "Primary_Swing1_Medium_Montage"),
                           pattern("Swing2", 280.0, 0.9, 0.2, 1.1, 2.8, dmg, 1.5, NB + "Primary_Swing2_Medium_Montage"),
-                          pattern("Smash", 320.0, 1.4, 0.25, 1.5, 5.0, dmg, 1.0, NB + "Primary_Swing3_Medium_Montage")], [], 1.15)
+                          pattern("Smash", 320.0, 1.4, 0.25, 1.5, 5.0, dmg, 1.0, NB + "Primary_Swing3_Medium_Montage")], [], 1.15, death="Death_Fwd")
 
 # Sandbox test boss (Narbash) gets the same swing motions.
 if eal.does_asset_exist("/Game/Dev/DA_Boss_Test"):
@@ -352,6 +354,9 @@ if eal.does_asset_exist("/Game/Dev/DA_Boss_Test"):
         for p, m in zip(pats, montages):
             p.set_editor_property("optional_montage", unreal.load_asset(NB + m))
         test_da.set_editor_property(prop, pats)
+    # L_Dev_Sandbox: a practice dummy that never attacks and revives after vanishing (user request).
+    test_da.set_editor_property("training_dummy", True)
+    test_da.set_editor_property("death_anim", unreal.load_asset(NB + "Death_Fwd"))
     eal.save_loaded_asset(test_da, False)
 
 # ---------------------------------------------------------------- Maps

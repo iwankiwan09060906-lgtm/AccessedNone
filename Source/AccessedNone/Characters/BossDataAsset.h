@@ -8,6 +8,7 @@ class UGameplayEffect;
 class UAnimMontage;
 class USkeletalMesh;
 class UAnimInstance;
+class UAnimSequenceBase;
 
 /** One animation-free attack: windup (telegraph glow) → active (hitbox) → recovery (spec 8.6). */
 USTRUCT(BlueprintType)
@@ -50,6 +51,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Visual") TSoftObjectPtr<USkeletalMesh> Mesh;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Visual") TSoftClassPtr<UAnimInstance> AnimClass;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Visual") float MeshScale = 1.f;
+	/** Played on death (last frame held); the body vanishes VanishDelay seconds after it ends. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Visual") TSoftObjectPtr<UAnimSequenceBase> DeathAnim;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Visual") float VanishDelay = 2.f;
+	/** Practice target (L_Dev_Sandbox): never attacks or moves, revives RespawnDelay seconds after vanishing. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Boss") bool bTrainingDummy = false;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Boss") float RespawnDelay = 1.5f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<FBossPattern> PatternSet_Armored;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<FBossPattern> PatternSet_Vulnerable;
 };

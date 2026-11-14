@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DeveloperSettings.h"
+#include "Particles/ParticleSystem.h"
 #include "AccessedNoneSettings.generated.h"
 
 /** One selectable player hero (visual + attack reach). Stats stay the knight's (spec 3.3). */
@@ -16,6 +17,14 @@ struct FHeroDef
 	/** Attack hitbox; the archer's long offset is a stand-in until AMetaProjectile (S5-T04). */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) FVector AttackExtent = FVector(100.f, 100.f, 90.f);
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) FVector AttackOffset = FVector(120.f, 0.f, 0.f);
+	/** Ranged hero: attacks fire AMetaProjectile at the aim point (crosshair + ground marker) instead of the melee hitbox. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) bool bRanged = false;
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, meta=(EditCondition="bRanged")) float ProjectileSpeed = 6000.f;
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, meta=(EditCondition="bRanged", Units="cm")) float AimRange = 4000.f;
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, meta=(EditCondition="bRanged")) TSoftObjectPtr<UParticleSystem> ProjectileFX;
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, meta=(EditCondition="bRanged")) TSoftObjectPtr<UParticleSystem> HeavyProjectileFX;
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, meta=(EditCondition="bRanged")) TSoftObjectPtr<UParticleSystem> HitFX;
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, meta=(EditCondition="bRanged")) TSoftObjectPtr<UParticleSystem> AimMarkerFX;
 	/** Light attack combo, cycled per swing (montages or sequences; sequences play in the montages' slot). */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) TArray<TSoftObjectPtr<UAnimSequenceBase>> LightAttackAnims;
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) TSoftObjectPtr<UAnimSequenceBase> HeavyAttackAnim;
@@ -42,10 +51,21 @@ public:
 			return H;
 		};
 		// Keys 1-4: warrior, archer (ranged), guard, statue. FengMao's mesh asset is named FengMao_GDC.
+		// Reach (user revision): 1 = 4, 3 slightly longer, 2 shoots arrows.
 		Heroes = { Hero(TEXT("Greystone"), 1.f, FVector(100, 100, 90), FVector(120, 0, 0)),
-		           Hero(TEXT("Sparrow"), 1.f, FVector(60, 60, 90), FVector(650, 0, 0)),
-		           Hero(TEXT("FengMao"), 1.f, FVector(100, 100, 90), FVector(120, 0, 0)),
-		           Hero(TEXT("Terra"), 1.f, FVector(120, 120, 90), FVector(140, 0, 0)) };
+		           Hero(TEXT("Sparrow"), 1.f, FVector(60, 60, 90), FVector(120, 0, 0)),
+		           Hero(TEXT("FengMao"), 1.f, FVector(130, 100, 90), FVector(165, 0, 0)),
+		           Hero(TEXT("Terra"), 1.f, FVector(100, 100, 90), FVector(120, 0, 0)) };
+		{
+			FHeroDef& Archer = Heroes[1];
+			const FString FX = TEXT("/Game/ParagonSparrow/FX/Particles/Sparrow/Abilities/");
+			auto P = [&FX](const TCHAR* Rel) { return TSoftObjectPtr<UParticleSystem>(FSoftObjectPath(FX + Rel)); };
+			Archer.bRanged = true;
+			Archer.ProjectileFX = P(TEXT("Primary/FX/P_Sparrow_PrimaryAttack.P_Sparrow_PrimaryAttack"));
+			Archer.HeavyProjectileFX = P(TEXT("Ultimate/FX/P_Sparrow_UltArrow.P_Sparrow_UltArrow"));
+			Archer.HitFX = P(TEXT("Primary/FX/P_Sparrow_HitHero.P_Sparrow_HitHero"));
+			Archer.AimMarkerFX = P(TEXT("RainOfArrows/FX/P_RainArrowsTarget.P_RainArrowsTarget"));
+		}
 		Heroes[2].Mesh = FSoftObjectPath(TEXT("/Game/ParagonFengMao/Characters/Heroes/FengMao/Meshes/FengMao_GDC.FengMao_GDC"));
 		// Attack motions (Paragon packs): primary combo montages + a slow/ability sequence as the heavy attack.
 		auto Anims = [](FHeroDef& H, std::initializer_list<const TCHAR*> Light, const TCHAR* Heavy)

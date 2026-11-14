@@ -20,6 +20,8 @@ class ACCESSEDNONE_API UEncounterSubsystem : public UWorldSubsystem
 public:
 	/** Adds Boss to the encounter (starting it if needed). Ignored for cleared encounters. */
 	UFUNCTION(BlueprintCallable, Category="Encounter") void BeginEncounter(FName EncounterId, AMetaBossBase* Boss);
+	/** Forgets that EncounterId was cleared and begins it again with Boss (training dummy revive). */
+	void RestartEncounter(FName EncounterId, AMetaBossBase* Boss);
 	UFUNCTION(BlueprintPure, Category="Encounter") bool IsInCombatEncounter() const { return !ActiveId.IsNone(); }
 	UFUNCTION(BlueprintPure, Category="Encounter") FName GetActiveEncounterId() const { return ActiveId; }
 	UFUNCTION(BlueprintPure, Category="Encounter") bool IsEncounterCleared(FName EncounterId) const;

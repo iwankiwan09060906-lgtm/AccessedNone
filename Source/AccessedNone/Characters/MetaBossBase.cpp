@@ -14,6 +14,8 @@
 #include "AIController.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Animation/AnimSequenceBase.h"
+#include "TimerManager.h"
 
 AMetaBossBase::AMetaBossBase()
 {
@@ -85,7 +87,10 @@ void AMetaBossBase::HandleGimmickStateChanged(EGimmickState Old, EGimmickState N
 			}
 		}
 		Patterns->SetPatternSet(BossData ? BossData->PatternSet_Armored : TArray<FBossPattern>());
-		Patterns->Start(EncounterTarget.Get());
+		if (!IsDummy())
+		{
+			Patterns->Start(EncounterTarget.Get());
+		}
 		break;
 	}
 	case EGimmickState::Breaking:
@@ -105,7 +110,10 @@ void AMetaBossBase::HandleGimmickStateChanged(EGimmickState Old, EGimmickState N
 		AbilitySystem->ApplyGameplayEffectToSelf(UGE_Boss_Vulnerable::StaticClass()->GetDefaultObject<UGameplayEffect>(), 1.f, AbilitySystem->MakeEffectContext());
 		AbilitySystem->RemoveLooseGameplayTag(MetaTags::State_Breaking);
 		Patterns->SetPatternSet(BossData ? BossData->PatternSet_Vulnerable : TArray<FBossPattern>());
-		Patterns->Resume();
+		if (!IsDummy())
+		{
+			Patterns->Resume();
+		}
 		{
 			FGameplayEventData Event;
 			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, MetaTags::Event_Gimmick_Broken, Event);
@@ -116,6 +124,7 @@ void AMetaBossBase::HandleGimmickStateChanged(EGimmickState Old, EGimmickState N
 	case EGimmickState::Defeated:
 		Patterns->Stop();
 		RemoveStateEffects();
+		PlayDeathAndVanish();
 		OnDefeated();
 		if (UEncounterSubsystem* Encounters = GetWorld()->GetSubsystem<UEncounterSubsystem>())
 		{
@@ -124,10 +133,12 @@ void AMetaBossBase::HandleGimmickStateChanged(EGimmickState Old, EGimmickState N
 		break;
 
 	case EGimmickState::Dormant:
+		GetWorldTimerManager().ClearTimer(DeathTimer);
+		SetPresent(true); // a reset brings defeated bosses back
 		Patterns->Stop();
 		RemoveStateEffects();
-		AbilitySystem->RemoveLooseGameplayTag(MetaTags::State_Dead, -1);
-		AbilitySystem->RemoveLooseGameplayTag(MetaTags::State_Breaking, -1);
+		AbilitySystem->SetLooseGameplayTagCount(MetaTags::State_Dead, 0);
+		AbilitySystem->SetLooseGameplayTagCount(MetaTags::State_Breaking, 0);
 		SetActorTransform(SpawnTransform, false, nullptr, ETeleportType::ResetPhysics);
 		GetCharacterMovement()->SetMovementMode(GetCharacterMovement()->DefaultLandMovementMode);
 		AbilitySystem->SetNumericAttributeBase(UMetaCombatAttributeSet::GetHealthAttribute(), Attributes->GetMaxHealth());
@@ -151,4 +162,51 @@ void AMetaBossBase::HandleDeath(const FGameplayEventData* Payload)
 {
 	Super::HandleDeath(Payload);
 	Gimmick->NotifyDefeated();
+}
+
+bool AMetaBossBase::IsDummy() const
+{
+	return BossData && BossData->bTrainingDummy;
+}
+
+void AMetaBossBase::PlayDeathAndVanish()
+{
+	float AnimSeconds = 0.f;
+	if (UAnimSequenceBase* Death = BossData ? BossData->DeathAnim.LoadSynchronous() : nullptr)
+	{
+		// Single-node playback without looping holds the final (collapsed) frame.
+		GetMesh()->PlayAnimation(Death, false);
+		AnimSeconds = Death->GetPlayLength();
+	}
+	const float Delay = AnimSeconds + (BossData ? BossData->VanishDelay : 2.f);
+	GetWorldTimerManager().SetTimer(DeathTimer, this, &AMetaBossBase::Vanish, FMath::Max(Delay, 0.01f), false);
+}
+
+void AMetaBossBase::Vanish()
+{
+	SetPresent(false);
+	if (IsDummy())
+	{
+		GetWorldTimerManager().SetTimer(DeathTimer, this, &AMetaBossBase::Revive, FMath::Max(BossData->RespawnDelay, 0.01f), false);
+	}
+}
+
+void AMetaBossBase::Revive()
+{
+	Gimmick->ResetEncounter(); // Dormant: back at spawn, full HP, visible
+	if (UEncounterSubsystem* Encounters = GetWorld()->GetSubsystem<UEncounterSubsystem>(); Encounters && !EncounterId.IsNone())
+	{
+		Encounters->RestartEncounter(EncounterId, this);
+	}
+}
+
+void AMetaBossBase::SetPresent(bool bPresent)
+{
+	SetActorHiddenInGame(!bPresent);
+	SetActorEnableCollision(bPresent);
+	if (bPresent && GetMesh()->GetAnimationMode() != EAnimationMode::AnimationBlueprint)
+	{
+		GetMesh()->SetAnimationMode(EAnimationMode::AnimationBlueprint); // leave the held death pose
+		SuppressIntroMontages();
+	}
 }
