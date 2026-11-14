@@ -208,3 +208,50 @@ bool FOpeningFlowTest::RunTest(const FString& Parameters)
 }
 
 #endif
+
+#if WITH_DEV_AUTOMATION_TESTS
+
+/**
+ * Enemies close in on the player once within aggro range (and stand guard outside it).
+ *   UnrealEditor-Cmd AccessedNone.uproject /Game/Maps/L_Prologue_FlowerField -game -nullrhi
+ *     -ExecCmds="Automation RunTests AccessedNone.Flow.EnemyChase; Quit"
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FEnemyChaseTest, "AccessedNone.Flow.EnemyChase", EAutomationTestFlags::ClientContext | EAutomationTestFlags::ProductFilter)
+bool FEnemyChaseTest::RunTest(const FString& Parameters)
+{
+	if (!InMap(MetaLevels::Prologue))
+	{
+		AddError(TEXT("Start the game in L_Prologue_FlowerField"));
+		return false;
+	}
+	struct FState { TArray<TWeakObjectPtr<AMetaBossBase>> Minions; TArray<float> StartDist; };
+	TSharedRef<FState> S = MakeShared<FState>();
+	auto Dist = [](const AMetaBossBase* B) { return FVector::Dist2D(B->GetActorLocation(), UGameplayStatics::GetPlayerPawn(GameWorld(), 0)->GetActorLocation()); };
+
+	Then([this, S, Dist]()
+	{
+		for (TActorIterator<AEncounterTriggerBox> It(GameWorld()); It; ++It)
+		{
+			if (It->EncounterId == FName(TEXT("P1_Minions")))
+			{
+				for (AMetaBossBase* B : It->Bosses) { S->Minions.Add(B); }
+			}
+		}
+		Teleport(FVector(-2100.f, 0.f, 120.f)); // ~1200 cm away: inside aggro range
+		StartTrigger(TEXT("P1_Minions"));
+		for (const TWeakObjectPtr<AMetaBossBase>& B : S->Minions) { S->StartDist.Add(Dist(B.Get())); }
+		TestEqual(TEXT("three minions"), S->Minions.Num(), 3);
+	}, 1.f);
+	Then([this, S, Dist]()
+	{
+		for (int32 i = 0; i < S->Minions.Num(); ++i)
+		{
+			const float Now = Dist(S->Minions[i].Get());
+			AddInfo(FString::Printf(TEXT("minion %d: %.0f -> %.0f cm"), i, S->StartDist[i], Now));
+			TestTrue(FString::Printf(TEXT("minion %d closed in"), i), Now < S->StartDist[i] - 400.f);
+		}
+	}, 2.5f);
+	return true;
+}
+
+#endif

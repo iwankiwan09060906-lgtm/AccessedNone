@@ -148,8 +148,28 @@ FVector AMetaPlayerCharacter::GetAimPoint(AActor*& OutTarget, bool& bOutHit) con
 	return End;
 }
 
+void AMetaPlayerCharacter::SetAttackFacing(bool bFacing)
+{
+	bAttackFacing = bFacing;
+	if (!IsLockedOn())
+	{
+		GetCharacterMovement()->bOrientRotationToMovement = !bFacing;
+	}
+}
+
 void AMetaPlayerCharacter::TickAim()
 {
+	if (bAttackFacing && !IsLockedOn())
+	{
+		AActor* FaceTarget = nullptr;
+		bool bFaceHit = false;
+		const FVector To = (GetAimPoint(FaceTarget, bFaceHit) - GetActorLocation()).GetSafeNormal2D();
+		if (!To.IsNearlyZero())
+		{
+			SetActorRotation(FMath::RInterpTo(GetActorRotation(), To.Rotation(), GetWorld()->GetDeltaSeconds(), 25.f));
+		}
+	}
+
 	const FHeroDef* H = GetHeroDef();
 	const bool bShow = H && H->bRanged && !IsDead();
 	if (!bShow)
@@ -398,7 +418,7 @@ void AMetaPlayerCharacter::ToggleLockOn()
 void AMetaPlayerCharacter::ClearLockOn()
 {
 	LockOnTarget.Reset();
-	GetCharacterMovement()->bOrientRotationToMovement = true;
+	GetCharacterMovement()->bOrientRotationToMovement = !bAttackFacing;
 	GetCharacterMovement()->bUseControllerDesiredRotation = false;
 }
 

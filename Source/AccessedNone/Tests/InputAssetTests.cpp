@@ -22,9 +22,8 @@ bool FInputAssetsTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	const TArray<FEnhancedActionKeyMapping>& Mappings = Gameplay->GetMappings();
-	TestEqual(TEXT("IMC_Gameplay mapping count"), Mappings.Num(), 15);
+	TestEqual(TEXT("IMC_Gameplay mapping count"), Mappings.Num(), 13);
 
-	const UInputAction* Shift = AMetaPlayerController::LoadAction(TEXT("IA_ModifierShift"));
 	auto Find = [&](const TCHAR* ActionName) -> const FEnhancedActionKeyMapping*
 	{
 		return Mappings.FindByPredicate([ActionName](const FEnhancedActionKeyMapping& M) { return M.Action && M.Action->GetName() == ActionName; });
@@ -34,10 +33,10 @@ bool FInputAssetsTest::RunTest(const FString& Parameters)
 		return M && M->Triggers.ContainsByPredicate([&](const UInputTrigger* T) { return Pred(T); });
 	};
 
-	TestTrue(TEXT("Heavy = LMB chorded with Shift"), HasTrigger(Find(TEXT("IA_HeavyAttack")), [&](const UInputTrigger* T)
-		{ const UInputTriggerChordAction* C = Cast<UInputTriggerChordAction>(T); return C && C->ChordAction == Shift; }));
-	TestTrue(TEXT("Light blocked by Shift"), HasTrigger(Find(TEXT("IA_LightAttack")), [&](const UInputTrigger* T)
-		{ const UInputTriggerChordBlocker* C = Cast<UInputTriggerChordBlocker>(T); return C && C->ChordAction == Shift; }));
+	// Light/heavy share LMB: no triggers (press → release), the controller times the hold.
+	const FEnhancedActionKeyMapping* Attack = Find(TEXT("IA_LightAttack"));
+	TestTrue(TEXT("attack = LMB without triggers"), Attack && Attack->Key == EKeys::LeftMouseButton && Attack->Triggers.IsEmpty());
+	TestNull(TEXT("no separate heavy mapping"), Find(TEXT("IA_HeavyAttack")));
 	TestTrue(TEXT("Dodge (roll) = pressed"), HasTrigger(Find(TEXT("IA_Dodge")), [](const UInputTrigger* T) { return T->IsA<UInputTriggerPressed>(); }));
 	TestNull(TEXT("no dash mapping (dash became the roll)"), Find(TEXT("IA_Dash")));
 	return true;

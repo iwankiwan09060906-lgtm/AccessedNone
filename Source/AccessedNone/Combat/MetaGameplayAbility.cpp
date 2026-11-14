@@ -48,6 +48,10 @@ void UGA_MeleeAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, c
 
 	AlreadyHit.Reset();
 	const FAttackParams P = GetParams();
+	if (Character->IsRanged())
+	{
+		Character->SetAttackFacing(true);
+	}
 	Character->PlayAttackMotion(P.DamageType == MetaTags::Damage_Type_Heavy, P.Windup + P.Active + P.Recovery);
 	UAbilityTask_WaitDelay* Wait = UAbilityTask_WaitDelay::WaitDelay(this, P.Windup);
 	Wait->OnFinish.AddDynamic(this, &UGA_MeleeAttack::OnActiveStart);
@@ -81,6 +85,16 @@ void UGA_MeleeAttack::OnActiveEnd()
 	UAbilityTask_WaitDelay* Wait = UAbilityTask_WaitDelay::WaitDelay(this, GetParams().Recovery);
 	Wait->OnFinish.AddDynamic(this, &UGA_MeleeAttack::OnRecoveryEnd);
 	Wait->ReadyForActivation();
+}
+
+void UGA_MeleeAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+{
+	if (AMetaPlayerCharacter* Character = GetPlayerCharacter())
+	{
+		Character->SetAttackFacing(false);
+	}
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
 void UGA_MeleeAttack::OnRecoveryEnd()

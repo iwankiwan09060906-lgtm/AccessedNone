@@ -15,6 +15,7 @@
 #include "Meta/MetaSettingsSubsystem.h"
 #include "Combat/MetaGameplayEffects.h"
 #include "UnrealClient.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -202,11 +203,32 @@ bool FSandboxPracticeTest::RunTest(const FString& Parameters)
 	{
 		FScreenshotRequest::RequestScreenshot(TEXT("Practice_Aim"), true, false);
 		S->BossHP = S->Boss->GetHealth();
+		// Body faces sideways (as if strafing); the shot must turn it toward the dummy.
+		S->Player->SetActorRotation(S->Player->GetActorRotation() + FRotator(0.f, 90.f, 0.f));
 		S->Player->ActivateAbility(UGA_LightAttack::StaticClass());
 	}, 1.5f));
+	{
+		// Poll: the turn must happen while the attack is still running (real frames can hitch on first FX loads).
+		TSharedRef<double> Start = MakeShared<double>(-1.0);
+		ADD_LATENT_AUTOMATION_COMMAND(FFunctionLatentCommand([this, S, Start]()
+		{
+			if (*Start < 0.0) { *Start = FPlatformTime::Seconds(); }
+			const FVector To = (S->BossSpawn - S->Player->GetActorLocation()).GetSafeNormal2D();
+			const bool bFacing = FVector::DotProduct(S->Player->GetActorForwardVector().GetSafeNormal2D(), To) > 0.95f;
+			const bool bAttacking = !S->Player->GetCharacterMovement()->bOrientRotationToMovement;
+			if (bFacing && bAttacking) { return true; }
+			if (!bAttacking || FPlatformTime::Seconds() - *Start > 3.0)
+			{
+				AddError(TEXT("archer did not face the target during the shot"));
+				return true;
+			}
+			return false;
+		}));
+	}
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, S]()
 	{
 		FScreenshotRequest::RequestScreenshot(TEXT("Practice_Arrow"), true, false);
+		TestTrue(TEXT("move-orientation restored after the shot"), S->Player->GetCharacterMovement()->bOrientRotationToMovement);
 		TestTrue(TEXT("arrow hit the dummy from 10 m"), S->Boss->GetHealth() < S->BossHP);
 		// Kill it: death motion, then vanish, then revive.
 		UAbilitySystemComponent* Src = S->Player->GetAbilitySystemComponent();
@@ -239,6 +261,22 @@ bool FSandboxPracticeTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("revived into combat"), S->Boss->GetGimmick()->GetState(), EGimmickState::Armored);
 		FScreenshotRequest::RequestScreenshot(TEXT("Practice_Revived"), true, false);
 	}, 0.5f));
+	// Light vs. full-charge heavy motion per hero (visual check, Saved/Screenshots).
+	for (int32 Hero = 0; Hero < 4; ++Hero)
+	{
+		for (const bool bHeavy : { false, true })
+		{
+			ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([S, Hero, bHeavy]()
+			{
+				S->Player->SetHero(Hero);
+				S->Player->ActivateAbility(bHeavy ? UGA_HeavyAttack::StaticClass() : UGA_LightAttack::StaticClass());
+			}, 1.2f));
+			ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([Hero, bHeavy]()
+			{
+				FScreenshotRequest::RequestScreenshot(FString::Printf(TEXT("Motion_Hero%d_%s"), Hero + 1, bHeavy ? TEXT("Heavy") : TEXT("Light")), true, false);
+			}, bHeavy ? 0.55f : 0.3f));
+		}
+	}
 	return true;
 }
 

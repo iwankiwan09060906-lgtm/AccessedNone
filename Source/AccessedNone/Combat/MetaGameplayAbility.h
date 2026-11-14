@@ -43,6 +43,8 @@ protected:
 		FGameplayTag DamageType;
 	};
 	virtual FAttackParams GetParams() const PURE_VIRTUAL(UGA_MeleeAttack::GetParams, return {};);
+	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
 private:
 	UFUNCTION() void OnActiveStart();

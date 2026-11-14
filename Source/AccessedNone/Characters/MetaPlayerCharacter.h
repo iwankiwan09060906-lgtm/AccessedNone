@@ -39,6 +39,8 @@ public:
 	/** Where an arrow would land: the lock-on target, else the camera-center trace (≤ AimRange). OutTarget = combatant under the aim. */
 	FVector GetAimPoint(AActor*& OutTarget, bool& bOutHit) const;
 	void FireProjectile(float MotionValue, FGameplayTag DamageType, bool bHeavy);
+	/** While a ranged attack runs the body turns to the aim point, then back to facing the movement direction. */
+	void SetAttackFacing(bool bFacing);
 
 	/** Somersault the mesh along WorldDir over Seconds (the roll has no animation asset). */
 	void StartRollVisual(const FVector& WorldDir, float Seconds);
@@ -90,5 +92,6 @@ private:
 	int32 ComboStep = 0;
 	double LastLightAttackTime = -1000.0;
 	bool bDashing = false;
+	bool bAttackFacing = false;
 	bool bHealing = false;
 };

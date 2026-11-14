@@ -96,3 +96,7 @@
 | 2026-11-14 | 버그 수정: 보스 리셋의 `RemoveLooseGameplayTag(Tag, -1)` → `SetLooseGameplayTagCount(Tag, 0)` | 음수 개수는 태그를 제거하지 않고 추가해, 리셋된 보스가 계속 '사망' 상태였음 (허수아비 부활 테스트에서 발견) |
 | 2026-11-14 | (사용자 지시) 공격 사거리: 1·4번 = 박스 100 / 오프셋 120, 3번 = 박스 130 / 오프셋 165(약간 김), 2번 = 원거리. 기존 궁수 긴 히트박스 임시안 폐기 | 캐릭터별 차이 |
 | 2026-11-14 | (사용자 지시) 2번(Sparrow) 화살 = `AMetaProjectile`(직선, 6000cm/s, 1.5초, GE_Damage = AttackPower × MotionValue). 조준점 = 락온 대상 또는 화면 중앙 트레이스(최대 40m). 화면 중앙 십자선(적 위면 붉은색) + 조준 지점 지면 마커(Paragon `P_RainArrowsTarget`), 궁수일 때 어깨 너머 카메라. 약/강공격 궤적 FX는 Paragon Sparrow 기본/궁극기 화살 | "타격점을 보여주어서 공격". `AMetaProjectile`은 7.3의 S5 클래스를 앞당겨 최소 구현 (S5에서 `Bounded.InMap` 확장) |
+| 2026-11-14 | (사용자 지시, 2.1/10 변경) 강공격 = 좌클릭을 `HeavyChargeSeconds`(0.8초) 이상 누른 뒤 뗄 때(Completed) 발동, 짧게 누르면 뗄 때 약공격. `IA_LightAttack` 하나(트리거 없음)로 처리, Shift 코드·`IA_HeavyAttack` 매핑 제거(에셋은 유지). 튜토리얼 문구 변경 | "버튼을 떼는 시점 기준 풀차지". 약공격이 누를 때 → 뗄 때로 바뀜(짧은 클릭이면 체감 차이 미미) |
+| 2026-11-14 | 강공격 모션을 기본공격 콤보와 다른 능력 애니메이션으로 교체: Greystone `Ability_R`, Sparrow `RMB_Fire`, FengMao `SlowAbility`, Terra `Q_swing_B` (스크린샷으로 차이 확인. FengMao `Ultimate`은 화면 밖으로 도약해 제외) | "강한 공격은 기본 공격과 다른 모션" |
+| 2026-11-14 | 버그 수정: 내비메시가 없는 레벨에서 `MoveToActor`가 실패를 반환하지 않고 이동도 하지 않아 적이 제자리에서 걷는 모션만 했음 → 내비 데이터가 있을 때만 경로 이동, 없으면 직접 조향. 추가로 `AggroRange`(18m) 안에서만 추격, 밖이면 대기 | 사용자 보고. `Flow.EnemyChase` 테스트로 재현(4cm 이동) 후 수정 확인(12m → 공격 사거리) |
+| 2026-11-14 | (사용자 지시) 궁수는 공격 중에만 조준점 쪽으로 몸을 돌림(`SetAttackFacing`, 이동 방향 회전 해제), 공격이 끝나면(`EndAbility`) 진행 방향 회전으로 복귀 | 활은 진행 방향인데 화살이 다른 곳으로 나가 어색했음 |

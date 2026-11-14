@@ -56,8 +56,8 @@ private:
 	void OnDodge();
 	void OnJump();
 	void OnLockOn();
-	void OnLightAttack();
-	void OnHeavyAttack();
+	/** Release of the attack button: short press = light, held >= HeavyChargeSeconds = heavy. */
+	void OnAttackReleased(const struct FInputActionInstance& Instance);
 	void OnUseItem();
 	void OnMenu() { ToggleMenu(); }
 	template <int32 Index> void OnSelectHero();

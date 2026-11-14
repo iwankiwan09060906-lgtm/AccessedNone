@@ -74,10 +74,10 @@ public:
 			for (const TCHAR* L : Light) { H.LightAttackAnims.Add(TSoftObjectPtr<UAnimSequenceBase>(FSoftObjectPath(Dir + L + TEXT(".") + L))); }
 			H.HeavyAttackAnim = FSoftObjectPath(Dir + Heavy + TEXT(".") + Heavy);
 		};
-		Anims(Heroes[0], { TEXT("Attack_PrimaryA_Montage"), TEXT("Attack_PrimaryB_Montage"), TEXT("Attack_PrimaryC_Montage") }, TEXT("Attack_A_Slow"));
-		Anims(Heroes[1], { TEXT("Primary_Fire_Med_Montage") }, TEXT("R_Ability_Slow_Fire"));
-		Anims(Heroes[2], { TEXT("Melee_A_Med_Montage"), TEXT("Melee_B_Fast_Montage"), TEXT("Melee_C_Med_Montage") }, TEXT("Primary_D"));
-		Anims(Heroes[3], { TEXT("Primary_Melee_A_slow_Montage"), TEXT("Primary_Melee_B_slow_Montage"), TEXT("Primary_Melee_C_slow_Montage") }, TEXT("RMB_melee"));
+		Anims(Heroes[0], { TEXT("Attack_PrimaryA_Montage"), TEXT("Attack_PrimaryB_Montage"), TEXT("Attack_PrimaryC_Montage") }, TEXT("Ability_R"));
+		Anims(Heroes[1], { TEXT("Primary_Fire_Med_Montage") }, TEXT("RMB_Fire"));
+		Anims(Heroes[2], { TEXT("Melee_A_Med_Montage"), TEXT("Melee_B_Fast_Montage"), TEXT("Melee_C_Med_Montage") }, TEXT("SlowAbility"));
+		Anims(Heroes[3], { TEXT("Primary_Melee_A_slow_Montage"), TEXT("Primary_Melee_B_slow_Montage"), TEXT("Primary_Melee_C_slow_Montage") }, TEXT("Q_swing_B"));
 	}
 
 	static const UAccessedNoneSettings& Get() { return *GetDefault<UAccessedNoneSettings>(); }
@@ -139,6 +139,8 @@ public:
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Attack") FVector PlayerHitboxOffset = FVector(120.f, 0.f, 0.f);
 	/** A light attack within this many seconds of the previous one continues the combo. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Attack") float ComboResetSeconds = 1.2f;
+	/** Holding the attack button at least this long, then releasing, fires the full-charge heavy attack. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Attack") float HeavyChargeSeconds = 0.8f;
 
 	// --- Movement ---
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Movement", meta=(Units="cm/s")) float WalkSpeed = 500.f;

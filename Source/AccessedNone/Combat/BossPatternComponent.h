@@ -30,6 +30,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Boss") float RecoveryScale = 1.f;
 	/** Distance at which the boss stops walking toward the target. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Boss") float ApproachAcceptance = 150.f;
+	/** Chases only while the target is within this distance; otherwise stands guard. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Boss", meta=(Units="cm")) float AggroRange = 1800.f;
 
 	/** Windup start (true) and active start (false) — BP drives the telegraph glow. */
 	UPROPERTY(BlueprintAssignable) FOnBossPatternPhase OnPatternPhase;

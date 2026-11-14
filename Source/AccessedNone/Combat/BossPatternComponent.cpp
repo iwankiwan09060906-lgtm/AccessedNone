@@ -1,4 +1,5 @@
 #include "Combat/BossPatternComponent.h"
+#include "NavigationSystem.h"
 #include "Characters/MetaCharacterBase.h"
 #include "Combat/MeleeHitboxComponent.h"
 #include "Combat/MetaGameplayEffects.h"
@@ -81,7 +82,7 @@ void UBossPatternComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 		Current = PickPattern(Distance);
 		if (Current == INDEX_NONE)
 		{
-			MoveTowardTarget();
+			if (Distance <= AggroRange) { MoveTowardTarget(); } else { StopMoving(); }
 			return;
 		}
 		StopMoving();
@@ -173,14 +174,15 @@ void UBossPatternComponent::MoveTowardTarget()
 	{
 		return;
 	}
+	// With no navmesh MoveToActor "succeeds" but never moves; only path-follow when nav data exists.
+	UNavigationSystemV1* Nav = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
 	AAIController* AI = Cast<AAIController>(Pawn->GetController());
-	if (AI && AI->GetMoveStatus() == EPathFollowingStatus::Moving)
+	if (AI && Nav && Nav->GetDefaultNavDataInstance(FNavigationSystem::DontCreate))
 	{
-		return;
-	}
-	if (AI && AI->MoveToActor(Target.Get(), ApproachAcceptance) != EPathFollowingRequestResult::Failed)
-	{
-		return;
+		if (AI->GetMoveStatus() == EPathFollowingStatus::Moving || AI->MoveToActor(Target.Get(), ApproachAcceptance) != EPathFollowingRequestResult::Failed)
+		{
+			return;
+		}
 	}
 	// No navmesh: slide straight at the target (fits the T-pose defense entities).
 	const FVector To = Target->GetActorLocation() - Pawn->GetActorLocation();
