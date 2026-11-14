@@ -16,13 +16,14 @@ TArray<AActor*> UMeleeHitboxComponent::QueryHits(const FVector& Extent, const FV
 		return Hits;
 	}
 
-	const FTransform& Xf = Owner->GetActorTransform();
+	const FTransform& Xf = Owner->GetActorTransform(); // scaled owners get proportionally larger boxes
 	const FVector Center = Xf.TransformPosition(LocalOffset);
 	const FQuat Rot = Xf.GetRotation();
+	const FVector Box = Extent * Xf.GetScale3D();
 
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(MeleeHitbox), false, Owner);
 	TArray<FOverlapResult> Overlaps;
-	World->OverlapMultiByObjectType(Overlaps, Center, Rot, FCollisionObjectQueryParams(ECC_Pawn), FCollisionShape::MakeBox(Extent), Params);
+	World->OverlapMultiByObjectType(Overlaps, Center, Rot, FCollisionObjectQueryParams(ECC_Pawn), FCollisionShape::MakeBox(Box), Params);
 	for (const FOverlapResult& O : Overlaps)
 	{
 		if (AActor* A = O.GetActor())
@@ -34,7 +35,7 @@ TArray<AActor*> UMeleeHitboxComponent::QueryHits(const FVector& Extent, const FV
 #if ENABLE_DRAW_DEBUG
 	if (CVarDebugHitbox.GetValueOnGameThread() != 0)
 	{
-		DrawDebugBox(World, Center, Extent, Rot, Hits.IsEmpty() ? FColor::Yellow : FColor::Red, false, 0.5f);
+		DrawDebugBox(World, Center, Box, Rot, Hits.IsEmpty() ? FColor::Yellow : FColor::Red, false, 0.5f);
 	}
 #endif
 	return Hits;

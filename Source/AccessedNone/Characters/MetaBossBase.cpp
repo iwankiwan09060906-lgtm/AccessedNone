@@ -13,6 +13,7 @@
 #include "AbilitySystemGlobals.h"
 #include "AIController.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Animation/AnimSequenceBase.h"
 #include "TimerManager.h"
@@ -38,6 +39,13 @@ void AMetaBossBase::BeginPlay()
 		GetMesh()->SetAnimInstanceClass(BossData->AnimClass.LoadSynchronous());
 		GetMesh()->SetRelativeLocationAndRotation(FVector(0.f, 0.f, -90.f), FRotator(0.f, -90.f, 0.f));
 		GetMesh()->SetRelativeScale3D(FVector(BossData->MeshScale));
+	}
+	if (BossData && !FMath::IsNearlyEqual(BossData->BodyScale, 1.f))
+	{
+		// Grow upward so the bigger capsule doesn't start inside the floor.
+		const float HalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() * GetActorScale3D().Z;
+		SetActorScale3D(FVector(BossData->BodyScale));
+		AddActorWorldOffset(FVector(0.f, 0.f, HalfHeight * (BossData->BodyScale - 1.f)));
 	}
 	Super::BeginPlay(); // after the mesh swap: base BeginPlay suppresses the new anim instance's intro montage
 	SpawnTransform = GetActorTransform();

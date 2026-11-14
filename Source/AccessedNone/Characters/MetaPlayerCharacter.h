@@ -36,6 +36,7 @@ public:
 	void PlayAttackMotion(bool bHeavy, float TotalSeconds);
 	// --- Ranged hero (Sparrow) ---
 	UFUNCTION(BlueprintPure, Category="Hero") bool IsRanged() const;
+	const struct FHeroDef* GetHeroDef() const;
 	/** Where an arrow would land: the lock-on target, else the camera-center trace (≤ AimRange). OutTarget = combatant under the aim. */
 	FVector GetAimPoint(AActor*& OutTarget, bool& bOutHit) const;
 	void FireProjectile(float MotionValue, FGameplayTag DamageType, bool bHeavy);
@@ -81,7 +82,6 @@ private:
 	void TickLockOn(float DeltaSeconds);
 	void TickRoll(float DeltaSeconds);
 	void TickAim();
-	const struct FHeroDef* GetHeroDef() const;
 
 	TWeakObjectPtr<AActor> LockOnTarget;
 	int32 HealFlaskCount = 0;

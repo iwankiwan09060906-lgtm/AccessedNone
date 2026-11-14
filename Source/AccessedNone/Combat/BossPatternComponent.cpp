@@ -78,11 +78,12 @@ void UBossPatternComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 
 	if (Phase == EPhase::Idle)
 	{
-		const float Distance = FVector::Dist2D(Owner->GetActorLocation(), Target->GetActorLocation());
+		// Pattern ranges are authored for a normal-size body; a scaled boss reaches proportionally further.
+		const float Distance = FVector::Dist2D(Owner->GetActorLocation(), Target->GetActorLocation()) / FMath::Max(Owner->GetActorScale3D().X, KINDA_SMALL_NUMBER);
 		Current = PickPattern(Distance);
 		if (Current == INDEX_NONE)
 		{
-			if (Distance <= AggroRange) { MoveTowardTarget(); } else { StopMoving(); }
+			if (Distance * Owner->GetActorScale3D().X <= AggroRange) { MoveTowardTarget(); } else { StopMoving(); }
 			return;
 		}
 		StopMoving();
@@ -186,7 +187,7 @@ void UBossPatternComponent::MoveTowardTarget()
 	}
 	// No navmesh: slide straight at the target (fits the T-pose defense entities).
 	const FVector To = Target->GetActorLocation() - Pawn->GetActorLocation();
-	if (To.Size2D() > ApproachAcceptance)
+	if (To.Size2D() > ApproachAcceptance * Pawn->GetActorScale3D().X)
 	{
 		Pawn->AddMovementInput(To.GetSafeNormal2D());
 	}

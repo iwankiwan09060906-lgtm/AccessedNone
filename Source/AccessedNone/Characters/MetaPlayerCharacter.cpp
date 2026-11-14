@@ -232,7 +232,11 @@ void AMetaPlayerCharacter::FireProjectile(float MotionValue, FGameplayTag Damage
 	}
 	AActor* Target = nullptr;
 	bool bHit = false;
-	const FVector Aim = GetAimPoint(Target, bHit);
+	FVector Aim = GetAimPoint(Target, bHit);
+	if (Target)
+	{
+		Aim = Target->GetActorLocation(); // the trace may touch an outstretched limb outside the body capsule (big bosses)
+	}
 	const FVector Muzzle = GetActorLocation() + GetActorForwardVector() * 60.f + FVector(0, 0, 40.f);
 	const FVector Dir = (Aim - Muzzle).GetSafeNormal();
 	if (!IsLockedOn())
@@ -510,7 +514,16 @@ void AMetaPlayerCharacter::HandleDeath(const FGameplayEventData* Payload)
 {
 	ClearLockOn();
 	SetDashing(false);
+	const bool bWasDead = IsDead();
 	Super::HandleDeath(Payload);
+	// Collapse and hold the last frame. shortcut: single-node anim mode stays until SetHero; restore it when breakpoint respawn (S3-T01) revives in place.
+	if (const FHeroDef* H = GetHeroDef(); H && !bWasDead)
+	{
+		if (UAnimSequenceBase* Death = H->DeathAnim.LoadSynchronous())
+		{
+			GetMesh()->PlayAnimation(Death, false);
+		}
+	}
 	if (UEncounterSubsystem* Encounters = GetWorld()->GetSubsystem<UEncounterSubsystem>())
 	{
 		Encounters->NotifyPlayerDied();

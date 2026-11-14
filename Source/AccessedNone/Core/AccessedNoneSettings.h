@@ -23,11 +23,14 @@ struct FHeroDef
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, meta=(EditCondition="bRanged", Units="cm")) float AimRange = 4000.f;
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, meta=(EditCondition="bRanged")) TSoftObjectPtr<UParticleSystem> ProjectileFX;
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, meta=(EditCondition="bRanged")) TSoftObjectPtr<UParticleSystem> HeavyProjectileFX;
-	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, meta=(EditCondition="bRanged")) TSoftObjectPtr<UParticleSystem> HitFX;
+	/** Contact effect: arrow impact for the archer, weapon impact for melee heroes. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) TSoftObjectPtr<UParticleSystem> HitFX;
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, meta=(EditCondition="bRanged")) TSoftObjectPtr<UParticleSystem> AimMarkerFX;
 	/** Light attack combo, cycled per swing (montages or sequences; sequences play in the montages' slot). */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) TArray<TSoftObjectPtr<UAnimSequenceBase>> LightAttackAnims;
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) TSoftObjectPtr<UAnimSequenceBase> HeavyAttackAnim;
+	/** Collapse when the player dies (last frame held). */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) TSoftObjectPtr<UAnimSequenceBase> DeathAnim;
 	/** Short flinch when an enemy hit lands on the player. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly) TSoftObjectPtr<UAnimSequenceBase> HitReactAnim;
 };
@@ -70,17 +73,21 @@ public:
 		}
 		Heroes[2].Mesh = FSoftObjectPath(TEXT("/Game/ParagonFengMao/Characters/Heroes/FengMao/Meshes/FengMao_GDC.FengMao_GDC"));
 		// Attack motions (Paragon packs): primary combo montages + a slow/ability sequence as the heavy attack.
-		auto Anims = [](FHeroDef& H, std::initializer_list<const TCHAR*> Light, const TCHAR* Heavy, const TCHAR* HitReact)
+		auto Anims = [](FHeroDef& H, std::initializer_list<const TCHAR*> Light, const TCHAR* Heavy, const TCHAR* HitReact, const TCHAR* Death)
 		{
 			const FString Dir = FString::Printf(TEXT("/Game/Paragon%s/Characters/Heroes/%s/Animations/"), *H.Id.ToString(), *H.Id.ToString());
 			for (const TCHAR* L : Light) { H.LightAttackAnims.Add(TSoftObjectPtr<UAnimSequenceBase>(FSoftObjectPath(Dir + L + TEXT(".") + L))); }
 			H.HeavyAttackAnim = FSoftObjectPath(Dir + Heavy + TEXT(".") + Heavy);
 			H.HitReactAnim = FSoftObjectPath(Dir + HitReact + TEXT(".") + HitReact);
+			H.DeathAnim = FSoftObjectPath(Dir + Death + TEXT(".") + Death);
 		};
-		Anims(Heroes[0], { TEXT("Attack_PrimaryA_Montage"), TEXT("Attack_PrimaryB_Montage"), TEXT("Attack_PrimaryC_Montage") }, TEXT("Ability_R"), TEXT("HitReact_Front"));
-		Anims(Heroes[1], { TEXT("Primary_Fire_Med_Montage") }, TEXT("RMB_Fire"), TEXT("HitReact_Fwd"));
-		Anims(Heroes[2], { TEXT("Melee_A_Med_Montage"), TEXT("Melee_B_Fast_Montage"), TEXT("Melee_C_Med_Montage") }, TEXT("SlowAbility"), TEXT("HitReact_Fwd"));
-		Anims(Heroes[3], { TEXT("Primary_Melee_A_slow_Montage"), TEXT("Primary_Melee_B_slow_Montage"), TEXT("Primary_Melee_C_slow_Montage") }, TEXT("Q_swing_B"), TEXT("HitReact_Front"));
+		Anims(Heroes[0], { TEXT("Attack_PrimaryA_Montage"), TEXT("Attack_PrimaryB_Montage"), TEXT("Attack_PrimaryC_Montage") }, TEXT("Ability_R"), TEXT("HitReact_Front"), TEXT("Death"));
+		Anims(Heroes[1], { TEXT("Primary_Fire_Med_Montage") }, TEXT("RMB_Fire"), TEXT("HitReact_Fwd"), TEXT("Death_Fwd"));
+		Anims(Heroes[2], { TEXT("Melee_A_Med_Montage"), TEXT("Melee_B_Fast_Montage"), TEXT("Melee_C_Med_Montage") }, TEXT("SlowAbility"), TEXT("HitReact_Fwd"), TEXT("Death_Fwd"));
+		Anims(Heroes[3], { TEXT("Primary_Melee_A_slow_Montage"), TEXT("Primary_Melee_B_slow_Montage"), TEXT("Primary_Melee_C_slow_Montage") }, TEXT("Q_swing_B"), TEXT("HitReact_Front"), TEXT("Death"));
+		// Melee contact effect per hero (Paragon impacts; the archer keeps her arrow hit FX set below).
+		Heroes[0].HitFX = TSoftObjectPtr<UParticleSystem>(FSoftObjectPath(TEXT("/Game/ParagonGreystone/FX/Particles/Greystone/Abilities/Primary/FX/P_Greystone_Primary_Impact.P_Greystone_Primary_Impact")));
+		Heroes[3].HitFX = TSoftObjectPtr<UParticleSystem>(FSoftObjectPath(TEXT("/Game/ParagonKhaimera/FX/ParticleSystems/Abilities/Primary/FX/P_Khaimera_LMB_Impact.P_Khaimera_LMB_Impact")));
 	}
 
 	static const UAccessedNoneSettings& Get() { return *GetDefault<UAccessedNoneSettings>(); }
@@ -152,9 +159,9 @@ public:
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Movement") float DodgeCooldown = 1.f;
 	/** Spark at the contact point when the player's weapon connects (enemies get no hit reaction). */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Combat|FX") TSoftObjectPtr<UParticleSystem> HitSparkFX =
-		TSoftObjectPtr<UParticleSystem>(FSoftObjectPath(TEXT("/Game/InfinityBladeEffects/Effects/FX_Combat_Base/Impact/P_Impact_Enemy_IB.P_Impact_Enemy_IB")));
+		TSoftObjectPtr<UParticleSystem>(FSoftObjectPath(TEXT("/Game/ParagonGreystone/FX/Particles/Greystone/Abilities/Primary/FX/P_Greystone_Primary_Impact.P_Greystone_Primary_Impact")));
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Combat|FX") TSoftObjectPtr<UParticleSystem> HeavyHitSparkFX =
-		TSoftObjectPtr<UParticleSystem>(FSoftObjectPath(TEXT("/Game/InfinityBladeEffects/Effects/FX_Combat_Base/Impact/P_Impact_Enemy_Strong.P_Impact_Enemy_Strong")));
+		TSoftObjectPtr<UParticleSystem>(FSoftObjectPath(TEXT("/Game/ParagonGrux/FX/Particles/Abilities/Primary/FX/P_Grux_Melee_SucessfulImpact.P_Grux_Melee_SucessfulImpact")));
 
 	// --- 3.4 Encounter specifics ---
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Encounter") float FakeBossHPMultiplier = 15.f;

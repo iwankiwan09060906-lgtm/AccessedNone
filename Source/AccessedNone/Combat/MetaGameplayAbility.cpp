@@ -133,13 +133,15 @@ void UGA_MeleeAttack::Sweep()
 
 		// Hit spark where the blade meets the target's surface (enemies themselves don't flinch).
 		const bool bHeavy = P.DamageType == MetaTags::Damage_Type_Heavy;
-		if (UParticleSystem* FX = (bHeavy ? S.HeavyHitSparkFX : S.HitSparkFX).LoadSynchronous())
+		const FHeroDef* Hero = Character->GetHeroDef();
+		const TSoftObjectPtr<UParticleSystem>& LightFX = Hero && !Hero->HitFX.IsNull() ? Hero->HitFX : S.HitSparkFX;
+		if (UParticleSystem* FX = (bHeavy ? S.HeavyHitSparkFX : LightFX).LoadSynchronous())
 		{
 			const ACharacter* TargetChar = Cast<ACharacter>(Target);
 			const float Radius = TargetChar ? TargetChar->GetCapsuleComponent()->GetScaledCapsuleRadius() : 40.f;
 			FVector Point = Target->GetActorLocation() + (Character->GetActorLocation() - Target->GetActorLocation()).GetSafeNormal2D() * Radius * 0.8f;
 			Point.Z = Character->GetActorLocation().Z + 30.f;
-			UGameplayStatics::SpawnEmitterAtLocation(Character, FX, Point, (Character->GetActorLocation() - Point).Rotation(), FVector(bHeavy ? 1.6f : 1.f));
+			UGameplayStatics::SpawnEmitterAtLocation(Character, FX, Point, (Character->GetActorLocation() - Point).Rotation(), FVector(bHeavy ? 1.3f : 1.f));
 		}
 	}
 }

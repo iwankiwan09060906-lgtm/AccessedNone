@@ -302,7 +302,7 @@ def hero_path(hero, rel):
     return f"/Game/Paragon{hero}/Characters/Heroes/{hero}/{rel}"
 
 
-def boss_assets(folder, da_name, bp_name, hero, display_key, minion, hp_override, armored, vulnerable, scale=1.0, death=None):
+def boss_assets(folder, da_name, bp_name, hero, display_key, minion, hp_override, armored, vulnerable, scale=1.0, death=None, body=1.0):
     f = unreal.DataAssetFactory()
     f.set_editor_property("data_asset_class", cls("BossDataAsset"))
     path = f"{folder}/{da_name}"
@@ -317,6 +317,7 @@ def boss_assets(folder, da_name, bp_name, hero, display_key, minion, hp_override
     da.set_editor_property("mesh", unreal.load_asset(hero_path(hero, f"Meshes/{hero}")))
     da.set_editor_property("anim_class", unreal.load_class(None, hero_path(hero, f"{hero}_AnimBlueprint.{hero}_AnimBlueprint_C")))
     da.set_editor_property("mesh_scale", scale)
+    da.set_editor_property("body_scale", body)
     if death:
         da.set_editor_property("death_anim", unreal.load_asset(hero_path(hero, f"Animations/{death}")))
     eal.save_loaded_asset(da, False)
@@ -343,7 +344,7 @@ boss_class = boss_assets("/Game/Characters/Bosses/Elbern", "DA_Boss_Elbern", "BP
                          tuning.get_editor_property("fake_boss_hp_multiplier"),
                          [pattern("Swing1", 280.0, 0.9, 0.2, 1.1, 2.4, dmg, 2.0, NB + "Primary_Swing1_Medium_Montage"),
                           pattern("Swing2", 280.0, 0.9, 0.2, 1.1, 2.8, dmg, 1.5, NB + "Primary_Swing2_Medium_Montage"),
-                          pattern("Smash", 320.0, 1.4, 0.25, 1.5, 5.0, dmg, 1.0, NB + "Primary_Swing3_Medium_Montage")], [], 1.15, death="Death_Fwd")
+                          pattern("Smash", 320.0, 1.4, 0.25, 1.5, 5.0, dmg, 1.0, NB + "Primary_Swing3_Medium_Montage")], [], 1.0, death="Death_Fwd", body=3.0)
 
 # Sandbox test boss (Narbash) gets the same swing motions.
 if eal.does_asset_exist("/Game/Dev/DA_Boss_Test"):
@@ -356,6 +357,7 @@ if eal.does_asset_exist("/Game/Dev/DA_Boss_Test"):
         test_da.set_editor_property(prop, pats)
     # L_Dev_Sandbox: a practice dummy that never attacks and revives after vanishing (user request).
     test_da.set_editor_property("training_dummy", True)
+    test_da.set_editor_property("body_scale", 3.0)  # user: bosses 3x bigger
     test_da.set_editor_property("death_anim", unreal.load_asset(NB + "Death_Fwd"))
     eal.save_loaded_asset(test_da, False)
 

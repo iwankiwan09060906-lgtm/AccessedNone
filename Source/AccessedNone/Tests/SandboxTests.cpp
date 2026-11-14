@@ -83,7 +83,7 @@ bool FSandboxBossFlowTest::RunTest(const FString& Parameters)
 
 	// 3) Put the player in front of the boss, facing it.
 	const FVector BossLoc = S->Boss->GetActorLocation();
-	const FVector Stand = BossLoc + S->Boss->GetActorForwardVector() * 150.f;
+	const FVector Stand = BossLoc + S->Boss->GetActorForwardVector() * 230.f; // outside the 3x boss capsule
 	S->Player->SetActorLocation(FVector(Stand.X, Stand.Y, S->Player->GetActorLocation().Z), false, nullptr, ETeleportType::TeleportPhysics);
 	S->Player->SetActorRotation((BossLoc - Stand).GetSafeNormal2D().Rotation());
 
@@ -184,7 +184,7 @@ bool FSandboxPracticeTest::RunTest(const FString& Parameters)
 
 	// Dummy: stands still and never hurts the player.
 	S->BossSpawn = S->Boss->GetActorLocation();
-	const FVector Stand = S->BossSpawn + S->Boss->GetActorForwardVector() * 180.f;
+	const FVector Stand = S->BossSpawn + S->Boss->GetActorForwardVector() * 230.f;
 	S->Player->SetActorLocation(FVector(Stand.X, Stand.Y, S->Player->GetActorLocation().Z), false, nullptr, ETeleportType::TeleportPhysics);
 	S->PlayerHP = S->Player->GetHealth();
 	S->PC->AN_Encounter();
@@ -271,7 +271,7 @@ bool FSandboxPracticeTest::RunTest(const FString& Parameters)
 			ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([S, Hero, bHeavy]()
 			{
 				// Melee range, facing the dummy, camera from the side-back so the contact spark is visible.
-				const FVector Stand = S->BossSpawn + S->Boss->GetActorForwardVector() * 190.f;
+				const FVector Stand = S->BossSpawn + S->Boss->GetActorForwardVector() * 240.f;
 				S->Player->SetActorLocation(FVector(Stand.X, Stand.Y, S->Player->GetActorLocation().Z), false, nullptr, ETeleportType::TeleportPhysics);
 				S->Player->SetActorRotation((S->BossSpawn - Stand).GetSafeNormal2D().Rotation());
 				S->PC->SetControlRotation((S->BossSpawn - Stand).GetSafeNormal2D().Rotation() + FRotator(-10.f, 35.f, 0.f));
@@ -371,6 +371,15 @@ bool FSandboxRollTest::RunTest(const FString& Parameters)
 		const UAnimInstance* Anim = S->Player->GetMesh()->GetAnimInstance();
 		TestTrue(TEXT("player flinches when hit"), Anim && Anim->IsAnyMontagePlaying());
 	}, 0.3f));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, S]()
+	{
+		// Lethal hit → the player collapses (death clip on the mesh) instead of standing.
+		UAbilitySystemComponent* Src = S->Boss->GetAbilitySystemComponent();
+		const FGameplayEffectSpecHandle Spec = Src->MakeOutgoingSpec(UGE_InstantKill::StaticClass(), 1.f, Src->MakeEffectContext());
+		Src->ApplyGameplayEffectSpecToTarget(*Spec.Data, S->Player->GetAbilitySystemComponent());
+		TestTrue(TEXT("player dead"), S->Player->IsDead());
+		TestEqual(TEXT("player plays the death clip"), S->Player->GetMesh()->GetAnimationMode(), EAnimationMode::AnimationSingleNode);
+	}, 0.5f));
 	return true;
 }
 

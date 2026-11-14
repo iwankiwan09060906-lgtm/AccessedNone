@@ -51,6 +51,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Visual") TSoftObjectPtr<USkeletalMesh> Mesh;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Visual") TSoftClassPtr<UAnimInstance> AnimClass;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Visual") float MeshScale = 1.f;
+	/** Whole-actor scale (capsule, mesh, attack hitboxes and ranges grow together). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Visual") float BodyScale = 1.f;
 	/** Played on death (last frame held); the body vanishes VanishDelay seconds after it ends. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Visual") TSoftObjectPtr<UAnimSequenceBase> DeathAnim;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Visual") float VanishDelay = 2.f;
