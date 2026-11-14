@@ -136,7 +136,6 @@ void AMetaBossBase::HandleGimmickStateChanged(EGimmickState Old, EGimmickState N
 		Patterns->Stop();
 		RemoveStateEffects();
 		PlayDeathAndVanish();
-		ApplyClearEffects();
 		OnDefeated();
 		if (UEncounterSubsystem* Encounters = GetWorld()->GetSubsystem<UEncounterSubsystem>())
 		{

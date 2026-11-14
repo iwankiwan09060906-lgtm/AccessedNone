@@ -105,6 +105,7 @@ void UEncounterSubsystem::NotifyBossDefeated(AMetaBossBase* Boss)
 		Hints->MarkEncounterCleared(Id);
 	}
 	GetWorld()->GetGameInstance()->GetSubsystem<UMetaSaveSubsystem>()->MarkEncounterDefeated(Id);
+	Boss->ApplyClearEffects(); // once per encounter, not per boss (E1 pack of three)
 	UE_LOG(LogGimmick, Log, TEXT("Encounter %s cleared"), *Id.ToString());
 	OnEncounterEnded.Broadcast(Id);
 }

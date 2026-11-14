@@ -7,9 +7,10 @@
 class UPointLightComponent;
 
 /**
- * E1 "어둠 속의 암살자" (spec 5 E1): stealthed (mesh hidden, Gimmick.Stealth) and invulnerable, ambushes with an
- * instant kill. Only its eyes glint now and then (more often from hint tier 1). Gamma ≥ 0.95 reveals it during the
- * whiteout; once vulnerable it is stunned for StunSeconds. Data (mesh, patterns, restore) lives in BP_Assassin / DA_Boss_Assassin.
+ * E1 "어둠 속의 암살자" (spec 5 E1, a pack of three): stealthed (mesh hidden, Gimmick.Stealth) and invulnerable, ambushes
+ * with an instant kill. Only its eyes glint now and then (more often from hint tier 1). Gamma ≥ 0.95 reveals it during the
+ * whiteout; it is dazzled only briefly (StunSeconds), then fights back, so the pack must be beaten in melee (user revision,
+ * DECISIONS.md). Data (mesh, patterns, restore) lives in BP_Assassin / DA_Boss_Assassin.
  */
 UCLASS()
 class ACCESSEDNONE_API AAssassinBoss : public AMetaBossBase
@@ -21,7 +22,7 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void OnHintTier(int32 Tier) override { HintTier = Tier; }
 
-	UPROPERTY(EditDefaultsOnly, Category="Assassin") float StunSeconds = 6.f;
+	UPROPERTY(EditDefaultsOnly, Category="Assassin") float StunSeconds = 1.f;
 	UPROPERTY(VisibleAnywhere, Category="Assassin") TObjectPtr<UPointLightComponent> EyeGlint;
 
 	UFUNCTION(BlueprintPure, Category="Assassin") bool IsStealthed() const { return bStealthed; }

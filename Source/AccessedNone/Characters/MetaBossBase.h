@@ -24,6 +24,8 @@ public:
 	void ResetEncounter();
 	/** Hint tier changed (deaths in this encounter, spec 6.3). Tier 1 = stronger anomaly visuals in subclasses. */
 	virtual void OnHintTier(int32 Tier) {}
+	/** Encounter cleared (last boss of the pack down): debugger line + settings restore from BossData. */
+	void ApplyClearEffects();
 	/** Training dummies never attack; dead bosses don't either. */
 	bool IsDummyOrDead() const { return IsDummy() || IsDead(); }
 
@@ -51,7 +53,6 @@ protected:
 private:
 	void RemoveStateEffects();
 	void PlayDeathAndVanish();
-	void ApplyClearEffects();
 	void Vanish();
 	void Revive();
 	void SetPresent(bool bPresent);

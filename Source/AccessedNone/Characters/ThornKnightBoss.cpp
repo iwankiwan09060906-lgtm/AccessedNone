@@ -9,11 +9,43 @@
 #include "HAL/IConsoleManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "ReferenceSkeleton.h"
+#include "Engine/SkinnedAsset.h"
 #include "UObject/ConstructorHelpers.h"
 
 namespace
 {
 	constexpr int32 SpikeCount = 26;
+
+	/** One box of the low-poly knight. End bone set: spans Bone → End. Otherwise a box of Size centered at Bone + Offset. */
+	struct FBlockSpec
+	{
+		const TCHAR* Bone;
+		const TCHAR* End;
+		FVector Size;   // cm in mesh space; Z ignored for spans (= bone length + padding)
+		FVector Offset; // mesh space (Grux faces +Y)
+	};
+	// Bone names of the Paragon Grux skeleton (DA_Boss_ThornKnight).
+	const FBlockSpec BlockSpecs[] = {
+		{ TEXT("pelvis"), nullptr, FVector(85, 70, 50), FVector(0, 0, -5) },
+		{ TEXT("spine_01"), TEXT("neck_01"), FVector(100, 80, 0), FVector::ZeroVector },
+		{ TEXT("head"), nullptr, FVector(52, 58, 52), FVector(0, 6, 4) },
+		{ TEXT("upperarm_l"), nullptr, FVector(58, 58, 44), FVector(0, 0, 10) },
+		{ TEXT("upperarm_r"), nullptr, FVector(58, 58, 44), FVector(0, 0, 10) },
+		{ TEXT("upperarm_l"), TEXT("lowerarm_l"), FVector(40, 40, 0), FVector::ZeroVector },
+		{ TEXT("upperarm_r"), TEXT("lowerarm_r"), FVector(40, 40, 0), FVector::ZeroVector },
+		{ TEXT("lowerarm_l"), TEXT("hand_l"), FVector(36, 36, 0), FVector::ZeroVector },
+		{ TEXT("lowerarm_r"), TEXT("hand_r"), FVector(36, 36, 0), FVector::ZeroVector },
+		{ TEXT("hand_l"), nullptr, FVector(34, 34, 34), FVector(0, 0, -12) },
+		{ TEXT("hand_r"), nullptr, FVector(34, 34, 34), FVector(0, 0, -12) },
+		{ TEXT("thigh_l"), TEXT("calf_l"), FVector(44, 44, 0), FVector::ZeroVector },
+		{ TEXT("thigh_r"), TEXT("calf_r"), FVector(44, 44, 0), FVector::ZeroVector },
+		{ TEXT("calf_l"), TEXT("foot_l"), FVector(38, 38, 0), FVector::ZeroVector },
+		{ TEXT("calf_r"), TEXT("foot_r"), FVector(38, 38, 0), FVector::ZeroVector },
+		{ TEXT("foot_l"), nullptr, FVector(36, 56, 20), FVector(0, 12, 8) },
+		{ TEXT("foot_r"), nullptr, FVector(36, 56, 20), FVector(0, 12, 8) },
+	};
+	constexpr float BlockSpanPadding = 14.f;
 }
 
 AThornKnightBoss::AThornKnightBoss()
@@ -29,6 +61,10 @@ AThornKnightBoss::AThornKnightBoss()
 
 	// Thorns on the upper body, pointing outward (mesh space: Z up from the feet).
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cone(TEXT("/Engine/BasicShapes/Cone.Cone"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cube(TEXT("/Engine/BasicShapes/Cube.Cube"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Grid(TEXT("/Game/Core/Materials/M_WorldGrid.M_WorldGrid"));
+	BlockMesh = Cube.Object;
+	BlockMaterial = Grid.Object; // gray checker of the defense entities (spec 12.1)
 	FRandomStream Rng(48000000);
 	for (int32 i = 0; i < SpikeCount; ++i)
 	{
@@ -68,6 +104,7 @@ void AThornKnightBoss::BeginPlay()
 			MID->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.06f, 0.05f, 0.05f)); // dark iron
 		}
 	}
+	BuildBlockBody();
 	SetHighPoly();
 }
 
@@ -81,7 +118,8 @@ void AThornKnightBoss::SetHighPoly()
 		Spikes[i]->SetVisibility(true);
 		Spikes[i]->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	}
-	GetMesh()->SetForcedLOD(0);
+	GetMesh()->SetVisibility(true, false);
+	SetBlockAlpha(0.f);
 	TrisText->SetVisibility(true);
 }
 
@@ -94,8 +132,67 @@ void AThornKnightBoss::FinishLowPoly()
 		Spike->SetVisibility(false);
 		Spike->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
-	GetMesh()->SetForcedLOD(GetMesh()->GetNumLODs()); // lowest LOD = the low-poly knight
+	SetBlockAlpha(1.f);
+	GetMesh()->SetVisibility(false, false); // keeps animating (AlwaysTickPoseAndRefreshBones) so the boxes move
 	TrisText->SetVisibility(false);
+}
+
+void AThornKnightBoss::BuildBlockBody()
+{
+	const USkinnedAsset* Asset = GetMesh()->GetSkinnedAsset();
+	if (!Asset || !BlockMesh || !Blocks.IsEmpty())
+	{
+		return;
+	}
+	GetMesh()->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+	const FReferenceSkeleton& Ref = Asset->GetRefSkeleton();
+	auto RefPose = [&Ref](const TCHAR* Bone, bool& bFound)
+	{
+		FTransform T = FTransform::Identity;
+		int32 Index = Ref.FindBoneIndex(Bone);
+		bFound = Index != INDEX_NONE;
+		for (; Index != INDEX_NONE; Index = Ref.GetParentIndex(Index))
+		{
+			T = T * Ref.GetRefBonePose()[Index];
+		}
+		return T;
+	};
+
+	for (const FBlockSpec& Spec : BlockSpecs)
+	{
+		bool bBone = false, bEnd = true;
+		const FTransform BoneCS = RefPose(Spec.Bone, bBone);
+		FTransform BoxCS(FQuat::Identity, BoneCS.GetLocation() + Spec.Offset, Spec.Size / 100.f); // the engine cube is 100 cm
+		if (Spec.End)
+		{
+			const FVector A = BoneCS.GetLocation();
+			const FVector B = RefPose(Spec.End, bEnd).GetLocation();
+			BoxCS = FTransform(FRotationMatrix::MakeFromZ(B - A).ToQuat(), (A + B) * 0.5f + Spec.Offset,
+				FVector(Spec.Size.X, Spec.Size.Y, FVector::Dist(A, B) + BlockSpanPadding) / 100.f);
+		}
+		if (!bBone || !bEnd)
+		{
+			continue; // a different skeleton: skip boxes it can't place
+		}
+		UStaticMeshComponent* Block = NewObject<UStaticMeshComponent>(this, *FString::Printf(TEXT("LowPolyBlock_%d"), Blocks.Num()));
+		Block->SetStaticMesh(BlockMesh);
+		if (BlockMaterial) { Block->SetMaterial(0, BlockMaterial); }
+		Block->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Block->SetupAttachment(GetMesh(), Spec.Bone);
+		Block->SetRelativeTransform(BoxCS.GetRelativeTransform(BoneCS));
+		Block->RegisterComponent();
+		Blocks.Add(Block);
+		BlockScales.Add(Block->GetRelativeScale3D());
+	}
+}
+
+void AThornKnightBoss::SetBlockAlpha(float Alpha)
+{
+	for (int32 i = 0; i < Blocks.Num(); ++i)
+	{
+		Blocks[i]->SetVisibility(Alpha > 0.f);
+		Blocks[i]->SetRelativeScale3D(BlockScales[i] * FMath::Max(Alpha, KINDA_SMALL_NUMBER));
+	}
 }
 
 void AThornKnightBoss::HandleGimmickStateChanged(EGimmickState Old, EGimmickState New)
@@ -144,6 +241,7 @@ void AThornKnightBoss::Tick(float DeltaSeconds)
 		{
 			Spikes[i]->SetRelativeScale3D(SpikeScales[i] * (1.f - Alpha));
 		}
+		SetBlockAlpha(Alpha);
 		if (Alpha >= 1.f)
 		{
 			FinishLowPoly();

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "InputCoreTypes.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Containers/Ticker.h"
 #include "MetaSettingsSubsystem.generated.h"
@@ -50,6 +51,13 @@ public:
 
 	static float GetDefaultValue(EMetaSettingKey Key);
 	static float ClampForKey(EMetaSettingKey Key, float Value);
+
+	/**
+	 * Filler menu entries (resolution, texture quality, key bindings…) that hide the gimmick rows (spec 6.1). Remembered
+	 * for the session only and never applied to the real system (spec 0.2-5).
+	 */
+	TMap<FName, float> DecoyValues;
+	TMap<FName, FKey> DecoyKeyBinds;
 
 	UPROPERTY(BlueprintAssignable) FOnMetaSettingChanged OnSettingChanged;
 	FOnMetaSettingChangedNative OnSettingChangedNative;

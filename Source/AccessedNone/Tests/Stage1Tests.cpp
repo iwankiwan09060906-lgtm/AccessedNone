@@ -143,6 +143,7 @@ namespace Stage1Test
 			PC()->ToggleMenu();
 			const UMetaSettingsWidget* Menu = Cast<UMetaSettingsWidget>(PC()->GetMenuWidget());
 			T->TestTrue(TEXT("answer row blinks at 8 deaths"), Menu && Menu->GetBlinkingKeys().Contains(Key));
+			T->TestTrue(TEXT("answer hidden among many rows / tabs"), Menu && Menu->GetRowCount() >= 60 && Menu->GetTabCount() == 7);
 		}, 0.3f);
 		Then([T, Id, Key, Answer]()
 		{
@@ -152,13 +153,21 @@ namespace Stage1Test
 		}, 0.5f);
 		Then([T, Id, CheckBroken, HitsToKill]()
 		{
-			AMetaBossBase* Boss = Trigger(Id)->Bosses[0];
-			T->TestEqual(TEXT("vulnerable"), Boss->GetGimmick()->GetState(), EGimmickState::Vulnerable);
-			CheckBroken(Boss);
-			for (int32 i = 0; i < HitsToKill - 1; ++i) { Hit(Player(), Boss, 1.f); }
-			T->TestFalse(TEXT("alive one hit short"), Boss->IsDead());
-			Hit(Player(), Boss, 1.f);
-			T->TestTrue(FString::Printf(TEXT("dies to %d light attacks"), HitsToKill), Boss->IsDead());
+			const auto& Bosses = Trigger(Id)->Bosses;
+			for (int32 b = 0; b < Bosses.Num(); ++b)
+			{
+				AMetaBossBase* Boss = Bosses[b];
+				T->TestEqual(TEXT("vulnerable"), Boss->GetGimmick()->GetState(), EGimmickState::Vulnerable);
+				CheckBroken(Boss);
+				for (int32 i = 0; i < HitsToKill - 1; ++i) { Hit(Player(), Boss, 1.f); }
+				T->TestFalse(TEXT("alive one hit short"), Boss->IsDead());
+				Hit(Player(), Boss, 1.f);
+				T->TestTrue(FString::Printf(TEXT("dies to %d light attacks"), HitsToKill), Boss->IsDead());
+				if (b + 1 < Bosses.Num())
+				{
+					T->TestFalse(TEXT("encounter not cleared while the pack lives"), Encounters()->IsEncounterCleared(Id));
+				}
+			}
 			T->TestTrue(TEXT("encounter cleared"), Encounters()->IsEncounterCleared(Id));
 		}, 1.3f);
 	}
@@ -178,7 +187,8 @@ bool FStage1EncountersTest::RunTest(const FString& Parameters)
 		return false;
 	}
 
-	// E1: invisible + invulnerable; gamma >= 0.95 reveals it, stunned, 3 light hits (minion D x 3).
+	// E1: a pack of three, invisible + invulnerable; gamma >= 0.95 reveals them, a short daze, then melee: 3 light hits each (minion D x 3).
+	TestEqual(TEXT("E1 is a pack of three assassins"), Trigger(TEXT("E1"))->Bosses.Num(), 3);
 	RunEncounter(this, TEXT("E1"), TEXT("BP_Stage1_Start"), EMetaSettingKey::Gamma, 1.f, 0.2f, TEXT("HINT_E1_3"), TEXT("HINT_E1_5"),
 		[this](AMetaBossBase* Boss)
 		{
@@ -192,7 +202,7 @@ bool FStage1EncountersTest::RunTest(const FString& Parameters)
 		{
 			const AAssassinBoss* A = Cast<AAssassinBoss>(Boss);
 			TestTrue(TEXT("revealed"), A && !A->IsStealthed() && A->GetMesh()->IsVisible());
-			TestTrue(TEXT("dazzled (stunned)"), Boss->GetAbilitySystemComponent()->HasMatchingGameplayTag(MetaTags::State_Stunned));
+			TestTrue(TEXT("dazzled only briefly, then fights"), A && A->StunSeconds <= 1.5f);
 		}, 3);
 	Then([this]()
 	{
@@ -217,6 +227,7 @@ bool FStage1EncountersTest::RunTest(const FString& Parameters)
 		{
 			const AThornKnightBoss* K = Cast<AThornKnightBoss>(Boss);
 			TestTrue(TEXT("low-poly, spike collision off"), K && K->IsLowPoly() && K->GetSpikes()[0]->GetCollisionEnabled() == ECollisionEnabled::NoCollision);
+			TestTrue(TEXT("box body shown, real mesh hidden"), K && K->GetBlocks().Num() >= 10 && K->GetBlocks()[0]->IsVisible() && !K->GetMesh()->IsVisible());
 			const float PlayerHP = Player()->GetHealth();
 			const float BossHP = Boss->GetHealth();
 			Hit(Player(), Boss, 1.f);
@@ -250,28 +261,36 @@ bool FStage1TourTest::RunTest(const FString& Parameters)
 	Then([Look]() { Player()->GetAbilitySystemComponent()->AddLooseGameplayTag(MetaTags::State_Invulnerable);
 		Look(Breakpoint(TEXT("BP_Stage1_Start"))->GetRespawnTransform().GetLocation() - FVector(150, 0, 0), FVector(3000, 0, 100)); }, 2.f);
 	Shot(TEXT("00_Start"));
-	Then([Look]() { Look(FVector(1650, 150, 120), FVector(1800, 260, 150)); }, 1.f);
+	Then([Look]() { Look(FVector(1650, 150, 120), FVector(1800, 300, 150)); }, 1.f);
 	Shot(TEXT("01_Stele"));
 	Then([]() { Player()->Interact(); }, 0.5f);
 	Shot(TEXT("02_SteleText"));
-	Then([Look]() { Look(FVector(2600, 0, 120), FVector(3400, 0, 120)); Trigger(TEXT("E1"))->StartEncounter(); }, 1.f);
+	Then([Look]() { Look(FVector(2700, 0, 120), FVector(3700, 0, 120)); Trigger(TEXT("E1"))->StartEncounter(); }, 1.f);
 	Then([](){}, 2.f);
 	Shot(TEXT("03_E1_Dark"));
 	Then([]() { Settings()->SetValue(EMetaSettingKey::Gamma, 0.97f); }, 0.5f);
 	Shot(TEXT("04_E1_Whiteout"));
 	Then([](){}, 1.5f);
 	Shot(TEXT("05_E1_Revealed"));
-	Then([]() { Kill(Player(), Trigger(TEXT("E1"))->Bosses[0]); Kill(Player(), Trigger(TEXT("E1"))->Bosses[0]); });
+	Then([]() { for (AMetaBossBase* B : Trigger(TEXT("E1"))->Bosses) { Kill(Player(), B); Kill(Player(), B); } });
 	Then([](){}, 3.f);
-	Then([Look]() { Look(FVector(5250, 0, 120), FVector(6000, 0, 50)); }, 0.5f);
+	Then([Look]() { Look(FVector(5000, 0, 120), FVector(8000, 0, 100)); }, 0.5f);
+	Shot(TEXT("06a_Pass"));
+	Then([Look]() { Look(FVector(9900, 0, 120), FVector(10600, 0, 50)); }, 0.5f);
 	Shot(TEXT("06_Hall_Debris"));
-	Then([Look]() { Look(FVector(6800, 0, 120), FVector(8200, 0, 300)); Trigger(TEXT("E2"))->StartEncounter(); }, 1.f);
+	Then([Look]() { Look(FVector(11300, 0, 120), FVector(13900, 0, 300)); Trigger(TEXT("E2"))->StartEncounter(); }, 1.f);
 	Then([](){}, 2.5f);
+	// 3/4 view of the knight wherever it walked to.
+	auto LookAtKnight = [Look]() { const FVector K = Trigger(TEXT("E2"))->Bosses[0]->GetActorLocation(); Look(K + FVector(-1000.f, -800.f, 0.f), K); };
+	Then(LookAtKnight);
 	Shot(TEXT("07_E2_Thorns"));
 	Then([]() { Settings()->SetValue(EMetaSettingKey::MeshQuality, 0.f); }, 0.3f);
-	Then([](){}, 1.5f);
+	Then(LookAtKnight, 1.5f);
 	Shot(TEXT("08_E2_LowPoly"));
+	Then([]() { PC()->ToggleMenu(); }, 0.5f);
 	Then([](){}, 0.5f);
+	Shot(TEXT("09_Settings"));
+	Then([]() { PC()->ToggleMenu(); }, 0.5f);
 	return true;
 }
 

@@ -47,6 +47,8 @@ void UMetaSettingsSubsystem::ResetAllToDefaults()
 		Values.Add(Key, GetDefaultValue(Key));
 	}
 	ActiveRestores.Reset();
+	DecoyValues.Reset();
+	DecoyKeyBinds.Reset();
 }
 
 float UMetaSettingsSubsystem::GetDefaultValue(EMetaSettingKey Key)
@@ -107,6 +109,10 @@ void UMetaSettingsSubsystem::ResetToEncounterDefault(EMetaSettingKey Key, float 
 	const float OldValue = GetValue(Key);
 	ActiveRestores.Remove(Key);
 	SetValue(Key, DefaultVal, true);
+	if (FMath::IsNearlyEqual(OldValue, GetValue(Key)))
+	{
+		return; // nothing overwritten (e.g. the 2nd and 3rd boss of a pack forcing the same value)
+	}
 
 	FFormatNamedArguments Args;
 	Args.Add(TEXT("Boss"), FText::FromString(BossDebugName));
