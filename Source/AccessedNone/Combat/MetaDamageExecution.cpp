@@ -82,6 +82,7 @@ void UMetaDamageExecution::Execute_Implementation(const FGameplayEffectCustomExe
 		Event.Target = TargetASC->GetAvatarActor();
 		Event.EventMagnitude = Raw;
 		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(TargetASC->GetAvatarActor(), MetaTags::Event_Hit_Immune, Event);
+		FMetaCombatEvents::OnDamage.Broadcast(TargetASC->GetAvatarActor(), 0.f, true);
 		return;
 	}
 

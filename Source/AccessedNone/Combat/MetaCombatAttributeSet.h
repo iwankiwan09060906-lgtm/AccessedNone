@@ -6,6 +6,13 @@
 #include "MetaCombatAttributeSet.generated.h"
 
 /** Spec 8.4. Single-player: no replication. */
+/** Every applied hit (HUD floating text). bImmune = blocked by State.Invulnerable (spec 3.2 step 3). */
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnMetaDamageNative, AActor* /*Target*/, float /*Damage*/, bool /*bImmune*/);
+struct ACCESSEDNONE_API FMetaCombatEvents
+{
+	static FOnMetaDamageNative OnDamage;
+};
+
 UCLASS()
 class ACCESSEDNONE_API UMetaCombatAttributeSet : public UAttributeSet
 {

@@ -5,6 +5,8 @@
 #include "GameplayEffectExtension.h"
 #include "AbilitySystemBlueprintLibrary.h"
 
+FOnMetaDamageNative FMetaCombatEvents::OnDamage;
+
 void UMetaCombatAttributeSet::ClampAttribute(const FGameplayAttribute& Attribute, float& NewValue) const
 {
 	if (Attribute == GetHealthAttribute())
@@ -63,6 +65,8 @@ void UMetaCombatAttributeSet::PostGameplayEffectExecute(const FGameplayEffectMod
 	SetHealth(FMath::Clamp(OldHealth - Damage, 0.f, GetMaxHealth()));
 	UE_LOG(LogMetaCombat, Verbose, TEXT("%s took %.2f (raw %.2f), HP %.1f -> %.1f"),
 		*GetNameSafe(TargetASC.GetAvatarActor()), Damage, Raw, OldHealth, GetHealth());
+
+	FMetaCombatEvents::OnDamage.Broadcast(TargetASC.GetAvatarActor(), Damage, false);
 
 	// 3.2 step 6: reflect raw × ratio back to the source, never re-reflecting.
 	FGameplayTagContainer SpecTags;

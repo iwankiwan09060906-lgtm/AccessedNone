@@ -91,3 +91,28 @@ void UEncounterSubsystem::NotifyBossDefeated(AMetaBossBase* Boss)
 	UE_LOG(LogGimmick, Log, TEXT("Encounter %s cleared"), *Id.ToString());
 	OnEncounterEnded.Broadcast(Id);
 }
+
+TArray<AMetaBossBase*> UEncounterSubsystem::GetActiveBosses() const
+{
+	TArray<AMetaBossBase*> Out;
+	for (const TWeakObjectPtr<AMetaBossBase>& B : ActiveBosses)
+	{
+		if (B.IsValid())
+		{
+			Out.Add(B.Get());
+		}
+	}
+	return Out;
+}
+
+AMetaBossBase* UEncounterSubsystem::GetPrimaryBoss() const
+{
+	for (AMetaBossBase* B : GetActiveBosses())
+	{
+		if (!B->IsDead())
+		{
+			return B;
+		}
+	}
+	return nullptr;
+}

@@ -45,3 +45,30 @@
 | 2026-11-14 | 시각 확인용 `AccessedNone.Sandbox.HeroShots` (렌더링 필요, `Saved/Screenshots`) | MCP 없이 스크린샷으로 캐릭터 모습 검증. Paragon 에셋의 BP 컴파일 Error 로그 때문에 종료 코드는 -1, 판정이 아니라 시각 확인용 |
 | 2026-11-14 | Terra(4번)의 도끼 머티리얼 슬롯 `M07_Justice_Weapon`을 모든 LOD에서 숨김 (`FHeroDef::HiddenMaterialSlots`) | UE 5.8이 Terra 메시를 로드 시 재빌드하면서 도끼 섹션(본 1개) 스킨 데이터가 깨져 애니메이션 중 늘어남. Paragon 원본 `TerraPlayerCharacter`도 동일. 기본 자세·도끼 숨김 시 정상 확인(HeroMotion 스크린샷). 에셋 수정은 사용자 승인 전까지 보류 |
 | 2026-11-14 | (사용자 승인) Paragon Terra 메시 에셋 수정: 깨진 LOD1·LOD2 제거(5→3 LOD), 전 LOD `UseHighPrecisionSkinWeights=true`, 저장. 도끼 숨김 우회 코드 제거 | LOD1·2의 도끼 섹션 버텍스가 본 16개에 흩어져 바인딩되어 애니메이션 중 늘어남(LOD0·3·4는 `weapon_slide` 1개로 정상). 원본 백업: `Saved/AssetBackups/Terra_original.uasset` |
+| 2026-11-14 | `ST_Game`의 원본은 `Scripts/Editor/create_string_table.py`의 표. CSV로 써서 C++ `UMetaTextLibrary::ImportStringTableCSV`로 임포트 | Python은 String Table을 편집할 수 없음. 텍스트를 한 곳에서 diff 가능하게 관리 |
+| 2026-11-14 | 11장에 없는 UI 키 추가: `SET_*`(설정창 라벨·선택지), `TITLE_*`(타이틀) | 7.4: 모든 사용자 노출 텍스트는 ST_Game. 비율 `16:9`/`4:3`, 숫자, 스테레오 `L/C/R`은 리터럴 |
+| 2026-11-14 | `MetaText::Get`이 첫 호출 시 `ST_Game`을 로드·루트 고정 | 미로드 상태에서 `<MISSING STRING TABLE ENTRY>` 표시(타이틀에서 확인됨) |
+| 2026-11-14 | 폰트는 Slate 기본(Roboto + DroidSansFallback, 모노는 DroidSansMono). `Content/UI/Fonts`의 NotoSansKR는 임포트하지 않음 | 기본 폰트로 한글 정상 표시 확인(스크린샷). 에셋 추가 불필요 |
+| 2026-11-14 | 모든 위젯 트리는 C++ `RebuildWidget`에서 구성, `WBP_*`는 부모 클래스만 지정. 코드는 `MetaUI::WidgetClass`로 WBP를 찾고 없으면 C++ 클래스 사용. `MetaUI::NeedsBuild`가 빈 루트 패널을 C++ 트리로 교체 | MCP/Python으로 위젯 트리 편집 불가 (MCP_CAPABILITIES) |
+| 2026-11-14 | 플로팅 데미지는 전역 네이티브 델리게이트 `FMetaCombatEvents::OnDamage`(AttributeSet·Execution에서 송신) | HUD가 모든 전투원 피격을 하나의 구독으로 받음 |
+| 2026-11-14 | HUD가 배너·시스템 로그·튜토리얼·화면 틴트·토스트도 담당. 페이즈 3 로그·대사는 HUD 로그 패널(좌상단)에 출력 | 디버거 터미널은 4.5에서 "첫 등장"이므로 페이즈 3에서 쓰지 않음 |
+| 2026-11-14 | HUD의 FP 바는 장식(항상 가득) | 원 기획에 FP 소모 규칙이 없음. 4.1 "정상적인 소울라이크 HUD" 외형만 재현 |
+| 2026-11-14 | `MS_TapeStop` 대신 BGM `UAudioComponent::SetPitchMultiplier` 1.0→0.3(2초) 후 정지. `DefaultEngine.ini` `GlobalMinPitchScale=0.1` | 리샘플링 피치는 피치와 재생 속도가 함께 변해 테이프 스톱과 같음. MetaSound 그래프 자동 생성은 불안정(0.3③) |
+| 2026-11-14 | BGM·키 클릭음은 `create_audio.py`가 합성한 WAV(`SW_BGM_Prologue` 16초 루프 현악 패드, `SW_KeyClick`) | 콘텐츠에 음악 에셋 없음 (12.4 대체 규칙) |
+| 2026-11-14 | `NS_SkyCrack`/`NS_SlashX999` 대신 Infinity Blade Cascade 파티클(`P_DOT_Lightning_01`, `P_HeroSwipe_Fire`)을 `APrologueDirector`의 소프트 참조로 사용 | Niagara 이미터 그래프는 Python으로 구성 불가(0.3③). 사용자 제공 에셋 활용 |
+| 2026-11-14 | 하늘 균열 = 하늘 평면 + `M_SkyCrack`(커스텀 HLSL: 들쭉날쭉한 원형 개방, 보라 테두리, 내부 `T_VoidNodes` 붉은 펄스, 포그 미적용). `T_VoidNodes`는 스크립트가 PNG로 생성 | 4.2 "직접 제작한 노드 텍스처". 파라미터 `CrackProgress`만 C++에서 제어 |
+| 2026-11-14 | `M_WorldGrid` = 커스텀 HLSL 월드 체크무늬(#7F7F7F/#5A5A5A) + WPO 정점 폭발(`ExplodeAmount`) | 4.3 비주얼 규칙을 노드 2개로 |
+| 2026-11-14 | `UBossDataAsset`에 `Mesh`/`AnimClass`/`MeshScale` 추가, `AMetaBossBase::BeginPlay`에서 적용. `BP_FakeBoss_Elbern`은 데이터 전용 BP(Paragon Sevarog) | 보스마다 C++ 서브클래스 불필요 |
+| 2026-11-14 | 방어 개체 = `ADefenseEntity`(Manny 레퍼런스 포즈, AI 없음, 무적, 컨트롤러 없이 중력 낙하) | 4.2~4.4. T-포즈 확인(스크린샷) |
+| 2026-11-14 | 오프닝 연출은 `Story/APrologueDirector`(새 폴더 `Story/`) 하나의 페이즈 머신. 장면 액터는 태그(`SkyCrack`, `HolyLight`)로 찾음 | 레벨 시퀀스 대신 C++ (0.2-2, 그래프 자산 최소화) |
+| 2026-11-14 | 페이즈 1에서 사망하면 3초 후 프롤로그 재시작. 튜토리얼 단계는 해당 행동 시 또는 12초 후 진행 | 브레이크포인트는 S3-T01. 튜토리얼이 진행을 막지 않게 |
+| 2026-11-14 | 페이즈 4 즉사는 시작 3.4초에 스크립트로 `GE_InstantKill` 적용(방어 개체가 플레이어 옆으로 스냅). 그 순간 일반 데미지 숫자를 끄고 `OP_P4_DAMAGE` 표시 | 입력과 무관하게 5초 내 사망 보장. 실제 수치(99,999)와 연출 수치 충돌 방지 |
+| 2026-11-14 | 오류창 규칙은 순수 구조체 `FMetaErrorWindowState`. `UGimmickCondition_UIDragDrop`은 오류창에 쓰지 않음(보스 없음, 판정식 동일) | Slate 없이 테스트 가능 |
+| 2026-11-14 | 새 게임은 가상 설정·힌트 카운터만 초기화하고 저장 파일은 지우지 않음 | 데이터 손실 방지. 저장은 다음 브레이크포인트에서 덮어씀 |
+| 2026-11-14 | `AMetaGameMode::StartPlay`가 레벨에 `AMetaPostProcessController`가 없으면 스폰. 마스터 볼륨은 `FAudioDevice::SetTransientPrimaryVolume`(게임 믹스만) | 8.9 "레벨마다 1개"를 레벨 작업 없이 보장. 1.3 OS 오디오 불변 |
+| 2026-11-14 | 감마 매핑: 0.5 중립, ±0.5 → ±3 EV + ColorGamma ±0.6, 0.95 이상 추가 +3 EV(화이트아웃). 전환 속도 상한 = 전체 구간 0.8초, 실시간 델타 | 12.3 화이트아웃 ≥0.8초, 메뉴 ×0.15 중에도 즉시 반영 |
+| 2026-11-14 | (에셋 수정) Infinity Blade 꽃·풀·나무 머티리얼에 Instanced Static Mesh 사용 플래그 추가 (`create_stage2_assets.py`가 설정) | 플래그가 없으면 인스턴싱 시 기본 체크 머티리얼로 렌더링됨. 비파괴적 플래그 변경 |
+| 2026-11-14 | `AMetaScatterField`(HISM)로 꽃밭·숲 배치 | Python으로 폴리지 페인팅 불가 |
+| 2026-11-14 | `GameDefaultMap=L_Title`, `GlobalDefaultGameMode=MetaGameMode` | 6.4 타이틀에서 시작 |
+| 2026-11-14 | `L_Stage1_DarkGrove`는 바닥·조명·나무·PlayerStart만 있는 플레이스홀더 (스크립트는 없을 때만 생성) | S2-T10 "없으면 빈 레벨 생성". 본 구성은 S3-T02 |
+| 2026-11-14 | `Flow.Opening` 게임 테스트는 Paragon BP의 `ResetOrientationAndPosition` 컴파일 에러를 예상 에러로 등록 | 에셋 팩의 기존 결함(5.8 비호환)이며 이 흐름과 무관 |

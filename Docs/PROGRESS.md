@@ -18,6 +18,23 @@
 
 **Stage 1 DoD:** 빌드 경고 0 ✅ · 에디터 테스트 12/12 + 게임 테스트 1/1 ✅ · 스모크(게임 로그 Error 없음) ✅ · GameUserSettings 미사용 ✅ · **손 조작감 확인 대기 (MANUAL_STEPS #2)**
 
-## Stage 2~6
+## Stage 2: 메타 UI 프레임워크와 오프닝 시퀀스
+
+| ID | 작업 | 상태 | 검증 / 메모 |
+|---|---|---|---|
+| S2-T01 | String Table `ST_Game` | DONE | 11장 전체 + 설정/타이틀 UI 키 99개. 원본은 `create_string_table.py`, C++ `UMetaTextLibrary`로 임포트. `Text.AllKeysExist` 통과 |
+| S2-T02 | HUD | DONE | `WBP_HUD`(HP/FP/스태미나·퀵슬롯·토스트·배너·로그·튜토리얼), `WBP_BossBar`, 플로팅 데미지(`FMetaCombatEvents::OnDamage`). 스크린샷 확인 |
+| S2-T03 | 가상 설정창 | DONE | `WBP_Settings` 3탭 8항목 즉시 적용·외부 변경 동기화·사망 8회 점멸, `AMetaPostProcessController`(감마·모션블러·마스터볼륨). 전투 중 ESC ×0.15 게임 테스트로 확인. **8회 점멸은 화면 미확인** (S3 힌트 테스트에서) |
+| S2-T04 | 디버거 터미널 | DONE | `WBP_Debugger` 큐 + 실시간 타자기(0.03초) + 키 클릭음. 스크린샷 확인 |
+| S2-T05 | 오류창 | DONE | `WBP_ErrorWindow`, `UMetaDraggableNumberWidget`, `UMetaNumberDragOperation`, 클릭-클릭 모드, 30/60초 힌트, 오버플로우 연출. `ErrorWindow.SwapRatio`/`InvalidDrop` 통과. **실제 마우스 드래그는 미검증** (MANUAL_STEPS #4) |
+| S2-T06 | 오버플로우 체력바 | DONE | `WBP_BossBar_Overflow` 0.1초 간격 12줄. 스크린샷 확인 |
+| S2-T07 | 타이틀 | DONE | `L_Title` + `WBP_Title`(새 게임/이어하기(저장 있을 때)/종료), 기본 맵으로 설정 |
+| S2-T08 | 페이즈 1 | DONE | `L_Prologue_FlowerField`(달밤 꽃밭), `BP_FakeBoss_Elbern`(Paragon Sevarog, HP D×15, 데미지 100), 튜토리얼 5단계, 성광 + `DEMON VANQUISHED` |
+| S2-T09 | 페이즈 2~4 | DONE | 테이프 스톱(피치 1→0.3), 글리치, `M_SkyCrack`(보라 균열+붉은 노드), IB 번개, 방어 개체 낙하(`ADefenseEntity`, `M_WorldGrid`), 로그 5줄, 오버플로우 바, 끊기는 휘두르기, 참격, 강제 즉사(3.4초) |
+| S2-T10 | 페이즈 5 | DONE | `Player = None`, 디버거 첫 등장, 오류창 파훼 → `L_Stage1_DarkGrove`(플레이스홀더) 로드 |
+
+**Stage 2 DoD:** 빌드 경고 0 ✅ · 에디터 테스트 15/15 + 게임 테스트 2/2 (`Flow.Opening`, `Sandbox.BossFlow`) ✅ · 타이틀 → 엔딩 직전 스테이지 1 진입까지 한 번에 진행(`Flow.Opening`, 렌더링 + 스크린샷 14장) ✅ · GameUserSettings 미변경 ✅ · **손 조작 확인 대기 (MANUAL_STEPS #4)**
+
+## Stage 3~6
 
 TODO

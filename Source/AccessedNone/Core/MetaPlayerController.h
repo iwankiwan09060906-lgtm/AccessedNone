@@ -39,6 +39,10 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category="Menu") TSubclassOf<class UUserWidget> MenuWidgetClass;
 
+	UFUNCTION(BlueprintPure, Category="UI") class UMetaHUDWidget* GetHUDWidget() const { return HUDWidget; }
+	/** Error window / name tag editing: IMC_UIManipulation replaces gameplay input, cursor shown (spec 8.8). */
+	UFUNCTION(BlueprintCallable, Category="UI") void SetUIManipulation(bool bEnabled);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
@@ -63,7 +67,7 @@ private:
 	void SetGameplayInputEnabled(bool bEnabled);
 
 	UPROPERTY() TObjectPtr<class UUserWidget> MenuWidget;
-
-public:
-	AMetaPlayerController();
+	UPROPERTY() TObjectPtr<class UMetaHUDWidget> HUDWidget;
+	UPROPERTY() TObjectPtr<class UMetaDebuggerWidget> DebuggerWidget;
+	bool bUIManipulation = false;
 };

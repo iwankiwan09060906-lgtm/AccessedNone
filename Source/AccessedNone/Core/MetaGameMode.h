@@ -11,4 +11,6 @@ class ACCESSEDNONE_API AMetaGameMode : public AGameModeBase
 
 public:
 	AMetaGameMode();
+	/** Ensures the level has an AMetaPostProcessController (spec 8.9: one per level). */
+	virtual void StartPlay() override;
 };

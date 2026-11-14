@@ -12,6 +12,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "AIController.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 AMetaBossBase::AMetaBossBase()
@@ -29,7 +30,14 @@ AMetaBossBase::AMetaBossBase()
 
 void AMetaBossBase::BeginPlay()
 {
-	Super::BeginPlay();
+	if (BossData && !BossData->Mesh.IsNull())
+	{
+		GetMesh()->SetSkeletalMeshAsset(BossData->Mesh.LoadSynchronous());
+		GetMesh()->SetAnimInstanceClass(BossData->AnimClass.LoadSynchronous());
+		GetMesh()->SetRelativeLocationAndRotation(FVector(0.f, 0.f, -90.f), FRotator(0.f, -90.f, 0.f));
+		GetMesh()->SetRelativeScale3D(FVector(BossData->MeshScale));
+	}
+	Super::BeginPlay(); // after the mesh swap: base BeginPlay suppresses the new anim instance's intro montage
 	SpawnTransform = GetActorTransform();
 	Gimmick->OnStateChanged.AddDynamic(this, &AMetaBossBase::HandleGimmickStateChanged);
 }

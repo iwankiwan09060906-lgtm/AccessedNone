@@ -24,6 +24,11 @@ public:
 	UFUNCTION(BlueprintPure, Category="Encounter") FName GetActiveEncounterId() const { return ActiveId; }
 	UFUNCTION(BlueprintPure, Category="Encounter") bool IsEncounterCleared(FName EncounterId) const;
 
+	/** First living boss of the active encounter (HUD boss bar), or null. */
+	AMetaBossBase* GetPrimaryBoss() const;
+	/** Bosses of the active encounter (settings menu reads their gimmick conditions for the 8-death blink). */
+	TArray<AMetaBossBase*> GetActiveBosses() const;
+
 	/** Player died: +1 death (hint tier), reset all bosses of the active encounter to Dormant. */
 	UFUNCTION(BlueprintCallable, Category="Encounter") void NotifyPlayerDied();
 	void NotifyBossDefeated(AMetaBossBase* Boss);

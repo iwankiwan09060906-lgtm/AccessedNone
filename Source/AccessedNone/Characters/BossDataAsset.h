@@ -6,6 +6,8 @@
 
 class UGameplayEffect;
 class UAnimMontage;
+class USkeletalMesh;
+class UAnimInstance;
 
 /** One animation-free attack: windup (telegraph glow) → active (hitbox) → recovery (spec 8.6). */
 USTRUCT(BlueprintType)
@@ -44,6 +46,10 @@ public:
 	/** Override for HP multiplier (> 0), e.g. the fake boss uses FakeBossHPMultiplier. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) float HPMultiplierOverride = 0.f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<TSubclassOf<UGameplayEffect>> ArmoredEffects;
+	/** Optional visuals applied on BeginPlay, so a boss BP needs no C++ subclass. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Visual") TSoftObjectPtr<USkeletalMesh> Mesh;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Visual") TSoftClassPtr<UAnimInstance> AnimClass;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Visual") float MeshScale = 1.f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<FBossPattern> PatternSet_Armored;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<FBossPattern> PatternSet_Vulnerable;
 };

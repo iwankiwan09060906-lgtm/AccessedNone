@@ -10,7 +10,11 @@
 #include "Gimmick/EncounterTriggerBox.h"
 #include "Combat/MetaCombatAttributeSet.h"
 #include "AbilitySystemComponent.h"
-#include "UI/MetaTempMenuWidget.h"
+#include "Core/MetaText.h"
+#include "UI/MetaDebuggerWidget.h"
+#include "UI/MetaHUDWidget.h"
+#include "UI/MetaSettingsWidget.h"
+#include "UI/MetaUI.h"
 #include "Blueprint/UserWidget.h"
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
@@ -23,6 +27,9 @@ namespace
 {
 	constexpr int32 GameplayContextPriority = 0;
 	constexpr int32 MenuContextPriority = 10;
+	constexpr int32 UIManipulationContextPriority = 20;
+	constexpr int32 HUDZOrder = 0;
+	constexpr int32 DebuggerZOrder = 5;
 
 	template <typename T>
 	T* LoadInputAsset(const TCHAR* Name)
@@ -37,11 +44,6 @@ namespace
 UInputAction* AMetaPlayerController::LoadAction(const TCHAR* Name) { return LoadInputAsset<UInputAction>(Name); }
 UInputMappingContext* AMetaPlayerController::LoadContext(const TCHAR* Name) { return LoadInputAsset<UInputMappingContext>(Name); }
 
-AMetaPlayerController::AMetaPlayerController()
-{
-	MenuWidgetClass = UMetaTempMenuWidget::StaticClass();
-}
-
 AMetaPlayerCharacter* AMetaPlayerController::GetMetaCharacter() const
 {
 	return Cast<AMetaPlayerCharacter>(GetPawn());
@@ -51,6 +53,50 @@ void AMetaPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 	SetGameplayInputEnabled(true);
+	if (!IsLocalController())
+	{
+		return;
+	}
+	if (!MenuWidgetClass)
+	{
+		MenuWidgetClass = MetaUI::WidgetClass<UMetaSettingsWidget>(TEXT("WBP_Settings"));
+	}
+	HUDWidget = CreateWidget<UMetaHUDWidget>(this, MetaUI::WidgetClass<UMetaHUDWidget>(TEXT("WBP_HUD")));
+	HUDWidget->AddToViewport(HUDZOrder);
+	DebuggerWidget = CreateWidget<UMetaDebuggerWidget>(this, MetaUI::WidgetClass<UMetaDebuggerWidget>(TEXT("WBP_Debugger")));
+	DebuggerWidget->AddToViewport(DebuggerZOrder);
+}
+
+void AMetaPlayerController::SetUIManipulation(bool bEnabled)
+{
+	UEnhancedInputLocalPlayerSubsystem* Input = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
+	UInputMappingContext* Gameplay = LoadContext(TEXT("IMC_Gameplay"));
+	UInputMappingContext* UI = LoadContext(TEXT("IMC_UIManipulation"));
+	bUIManipulation = bEnabled;
+	if (Input && Gameplay && UI)
+	{
+		if (bEnabled)
+		{
+			Input->RemoveMappingContext(Gameplay);
+			Input->AddMappingContext(UI, UIManipulationContextPriority);
+		}
+		else
+		{
+			Input->RemoveMappingContext(UI);
+			Input->AddMappingContext(Gameplay, GameplayContextPriority);
+		}
+	}
+	if (bEnabled)
+	{
+		FInputModeGameAndUI Mode;
+		Mode.SetHideCursorDuringCapture(false);
+		SetInputMode(Mode);
+	}
+	else
+	{
+		SetInputMode(FInputModeGameOnly());
+	}
+	SetShowMouseCursor(bEnabled);
 }
 
 void AMetaPlayerController::EndPlay(const EEndPlayReason::Type Reason)
@@ -98,8 +144,12 @@ void AMetaPlayerController::ToggleMenu()
 
 	if (GetGameInstance()->GetSubsystem<UMetaSettingsSubsystem>()->IsMenuLocked())
 	{
-		// shortcut: log only; the UI_ACCESS_DENIED toast is added with the HUD in S2-T02 / E6 in S6-T03.
 		UE_LOG(LogAccessedNone, Log, TEXT("Menu locked: Access Denied"));
+		if (HUDWidget) { HUDWidget->ShowToast(MetaText::Get(TEXT("UI_ACCESS_DENIED"))); }
+		return;
+	}
+	if (bUIManipulation)
+	{
 		return;
 	}
 
