@@ -2,6 +2,23 @@
 
 > **상태 (2026-11-15): 완료된 초기 준비 문서입니다.** 개발은 Stage 3까지 진행됐습니다. 마스터 명세는 이 문서가 말하는 `AccessedNone_MasterPrompt.md` 대신 프로젝트 루트의 `CLAUDE.md`에 통합되어 있고, 진행 상황은 `Docs/PROGRESS.md`가 기준입니다. 아래 내용은 기록용으로 남겨 둡니다.
 
+## 필요한 마켓(Fab) 에셋 팩 — Git에 없음 (2026-11-15)
+
+용량(약 34GB)과 라이선스 때문에 아래 팩은 Git에 올리지 않습니다(`.gitignore`). 새 PC에서 클론한 뒤 Epic 런처/Fab에서 받아 **`Content/` 바로 아래에 같은 폴더 이름으로** 넣어야 맵·캐릭터가 열립니다.
+
+| 폴더 | 팩 |
+|---|---|
+| `ParagonGreystone`, `ParagonSparrow`, `ParagonFengMao`, `ParagonTerra` | 플레이어 캐릭터 (숫자키 1~4) |
+| `ParagonSevarog`, `ParagonGrux`, `ParagonNarbash`, `ParagonKhaimera`, `ParagonMuriel`, `ParagonRampage` | 보스·적 (E1 암살자 = Sevarog, E2 기사 = Grux, 엘베른·허수아비 = Narbash, 페이즈 1 잡몹 = Khaimera) |
+| `InfinityBladeGrassLands`, `InfinityBladeIceLands`, `InfinityBladeCastle`, `InfinityBladeFireLands` | 지형 (오프닝 = GrassLands, 스테이지 1 = IceLands) |
+| `InfinityBladeWarriors`, `InfinityBladeAdversaries`, `InfinityBladeWeapons`, `Infinity_Blade_Assets` | 페이즈 2~4 낙하 방어 개체 등 |
+| `InfinityBladeEffects` | 눈·안개·불·폭발 파티클 |
+| `EnvironmentPack2`, `EnvironmentPack3` | 오프닝 꽃밭·잔디 머티리얼 |
+
+**로컬에서 수정한 마켓 에셋 (새로 받으면 다시 해야 함):**
+- `ParagonTerra` 메시: 깨진 LOD1·LOD2 제거 + 고정밀 스킨 웨이트 (`DECISIONS.md` 2026-11-14 "Paragon Terra 메시 에셋 수정"). 안 하면 Terra 도끼가 깨져 보임.
+- IceLands·GrassLands 일부 머티리얼의 Instanced Static Mesh 사용 플래그: `create_stage2_assets.py` / `create_stage3_assets.py`를 다시 실행하면 자동으로 켜짐.
+
 이 문서의 모든 항목에 체크하면 Claude Code에게 **"Stage 1부터 시작해"** 한 마디로 개발을 처음부터 끝까지 맡길 수 있습니다.
 기준 문서: `AccessedNone_MasterPrompt.md` (마스터 명세)
 

@@ -8,3 +8,8 @@ Build/
 *.vcxproj
 *.vcxproj.filters
 *.vcxproj.user
+# 마켓(Fab) 에셋 팩: 용량(약 34GB)·라이선스 때문에 Git에 올리지 않음. 필요한 팩 목록은 Docs/SETUP_CHECKLIST.md
+Content/Paragon*/
+Content/InfinityBlade*/
+Content/Infinity_Blade_Assets/
+Content/EnvironmentPack*/
