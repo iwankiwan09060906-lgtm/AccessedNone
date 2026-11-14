@@ -140,6 +140,8 @@ bool FOpeningFlowTest::RunTest(const FString& Parameters)
 	Then([]() { Shot(TEXT("01a_LightAttack")); }, 0.3f);
 	Then([]() { Cast<AMetaPlayerCharacter>(UGameplayStatics::GetPlayerPawn(GameWorld(), 0))->ActivateAbility(UGA_HeavyAttack::StaticClass()); }, 1.2f);
 	Then([]() { Shot(TEXT("01b_HeavyAttack")); }, 0.6f);
+	Then([]() { Cast<AMetaPlayerCharacter>(UGameplayStatics::GetPlayerPawn(GameWorld(), 0))->ActivateAbility(UGA_Dodge::StaticClass()); }, 1.2f);
+	Then([]() { Shot(TEXT("01c_Roll")); }, 0.2f);
 
 	// Phase 1a: the three fake minions (walking into their trigger).
 	Then([this]() { Teleport(FVector(-1500.f, 0.f, 120.f)); StartTrigger(TEXT("P1_Minions")); }, 1.5f);
@@ -176,8 +178,7 @@ bool FOpeningFlowTest::RunTest(const FString& Parameters)
 	WaitUntil(this, TEXT("phase 3"), 10.0, []() { return Director() && Director()->GetPhase() == EProloguePhase::Logs; });
 	Then([]() { Shot(TEXT("07_Logs")); }, 8.5f);
 	WaitUntil(this, TEXT("phase 4"), 10.0, []() { return Director() && Director()->GetPhase() == EProloguePhase::Execution; });
-	Then([]() { Shot(TEXT("08_Overflow")); }, 1.4f);
-	Then([]() { Shot(TEXT("09_Explosion")); }, 1.0f);
+	Then([]() { Shot(TEXT("09_Explosion")); }, 1.1f);
 
 	// Phase 4 must kill the player within ~5 s no matter what.
 	WaitUntil(this, TEXT("forced death"), 6.0, []() { return Director() && Director()->GetPhase() == EProloguePhase::Dead; });

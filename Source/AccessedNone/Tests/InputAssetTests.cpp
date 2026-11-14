@@ -22,10 +22,9 @@ bool FInputAssetsTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	const TArray<FEnhancedActionKeyMapping>& Mappings = Gameplay->GetMappings();
-	TestEqual(TEXT("IMC_Gameplay mapping count"), Mappings.Num(), 16);
+	TestEqual(TEXT("IMC_Gameplay mapping count"), Mappings.Num(), 15);
 
 	const UInputAction* Shift = AMetaPlayerController::LoadAction(TEXT("IA_ModifierShift"));
-	const float TapHold = UAccessedNoneSettings::Get().DashHoldThreshold;
 	auto Find = [&](const TCHAR* ActionName) -> const FEnhancedActionKeyMapping*
 	{
 		return Mappings.FindByPredicate([ActionName](const FEnhancedActionKeyMapping& M) { return M.Action && M.Action->GetName() == ActionName; });
@@ -39,10 +38,8 @@ bool FInputAssetsTest::RunTest(const FString& Parameters)
 		{ const UInputTriggerChordAction* C = Cast<UInputTriggerChordAction>(T); return C && C->ChordAction == Shift; }));
 	TestTrue(TEXT("Light blocked by Shift"), HasTrigger(Find(TEXT("IA_LightAttack")), [&](const UInputTrigger* T)
 		{ const UInputTriggerChordBlocker* C = Cast<UInputTriggerChordBlocker>(T); return C && C->ChordAction == Shift; }));
-	TestTrue(TEXT("Dodge = tap"), HasTrigger(Find(TEXT("IA_Dodge")), [&](const UInputTrigger* T)
-		{ const UInputTriggerTap* C = Cast<UInputTriggerTap>(T); return C && FMath::IsNearlyEqual(C->TapReleaseTimeThreshold, TapHold); }));
-	TestTrue(TEXT("Dash = hold"), HasTrigger(Find(TEXT("IA_Dash")), [&](const UInputTrigger* T)
-		{ const UInputTriggerHold* C = Cast<UInputTriggerHold>(T); return C && FMath::IsNearlyEqual(C->HoldTimeThreshold, TapHold); }));
+	TestTrue(TEXT("Dodge (roll) = pressed"), HasTrigger(Find(TEXT("IA_Dodge")), [](const UInputTrigger* T) { return T->IsA<UInputTriggerPressed>(); }));
+	TestNull(TEXT("no dash mapping (dash became the roll)"), Find(TEXT("IA_Dash")));
 	return true;
 }
 

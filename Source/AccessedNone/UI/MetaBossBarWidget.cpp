@@ -12,21 +12,12 @@ TSharedRef<SWidget> UMetaBossBarWidget::RebuildWidget()
 {
 	if (MetaUI::NeedsBuild(WidgetTree))
 	{
-		USizeBox* Root = WidgetTree->ConstructWidget<USizeBox>();
-		Root->SetWidthOverride(900.f);
-		UVerticalBox* Box = WidgetTree->ConstructWidget<UVerticalBox>();
-		Root->AddChild(Box);
-
-		NameText = MetaUI::Text(WidgetTree, FText::GetEmpty(), 18, FLinearColor(0.9f, 0.88f, 0.82f));
-		Box->AddChildToVerticalBox(NameText);
-
-		USizeBox* BarSize = WidgetTree->ConstructWidget<USizeBox>();
-		BarSize->SetHeightOverride(14.f);
-		HealthBar = WidgetTree->ConstructWidget<UProgressBar>();
-		HealthBar->SetFillColorAndOpacity(FLinearColor(0.55f, 0.04f, 0.04f));
-		BarSize->AddChild(HealthBar);
-		Cast<UVerticalBoxSlot>(Box->AddChildToVerticalBox(BarSize))->SetPadding(FMargin(0.f, 4.f));
-		HealthBar->SetPercent(1.f);
+		UVerticalBox* Root = WidgetTree->ConstructWidget<UVerticalBox>();
+		NameText = MetaUI::Text(WidgetTree, FText::GetEmpty(), 18, FLinearColor(0.93f, 0.89f, 0.8f));
+		NameText->SetFont(MetaUI::Font(18, TEXT("Regular"), 120));
+		NameText->SetShadowOffset(FVector2D(1.f, 1.f));
+		Root->AddChildToVerticalBox(NameText)->SetPadding(FMargin(2.f, 0.f, 0.f, 4.f));
+		Root->AddChildToVerticalBox(MetaUI::FramedBar(WidgetTree, 820.f, 12.f, FLinearColor(0.58f, 0.03f, 0.04f), HealthBar, Trail));
 		WidgetTree->RootWidget = Root;
 	}
 	return Super::RebuildWidget();
@@ -51,6 +42,8 @@ void UMetaBossBarWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTi
 	Super::NativeTick(MyGeometry, InDeltaTime);
 	if (const AMetaBossBase* B = Boss.Get(); B && HealthBar && B->GetMaxHealth() > 0.f)
 	{
-		HealthBar->SetPercent(B->GetHealth() / B->GetMaxHealth());
+		const float Pct = B->GetHealth() / B->GetMaxHealth();
+		HealthBar->SetPercent(Pct);
+		Trail->SetPercent(MetaUI::StepTrail(Trail->GetPercent(), Pct, InDeltaTime, TrailHold));
 	}
 }

@@ -119,41 +119,75 @@ tm2 = mel.create_material_expression(sky, unreal.MaterialExpressionTime, -900, 2
 texobj = mel.create_material_expression(sky, unreal.MaterialExpressionTextureObject, -900, 300)
 texobj.set_editor_property("texture", digit_tex)
 SKY_HLSL = """
-const float N = 9.0;
-float2 grid = UV * N; float2 ip = floor(grid); float2 fp = frac(grid);
-float d1 = 8.0; float d2 = 8.0; float2 cell = 0;
+const float PI2 = 6.2831853;
+const float K = 16.0;
+float2 o = float2(0.5, 0.5);
+float2 dd = UV - o; float r = length(dd);
+float a = atan2(dd.y, dd.x); if (a < 0.0) a += PI2;
+float base = P * 0.22;
+float on = step(0.001, P);
+// One big hole: a jagged 16-point polygon (random vertex radii) plus fine splinters.
+float s = a / PI2 * K; float k0 = floor(s); float t = s - k0; float k1 = fmod(k0 + 1.0, K);
+float h0 = frac(sin(k0 * 78.233 + 1.7) * 43758.5453); float h1 = frac(sin(k1 * 78.233 + 1.7) * 43758.5453);
+float spl = pow(abs(frac(a * 7.3) - 0.5) * 2.0, 6.0) * 0.18 + pow(abs(frac(a * 19.7 + 0.3) - 0.5) * 2.0, 8.0) * 0.08; // sharp splinters
+float R = base * (lerp(0.55 + 0.8 * h0, 0.55 + 0.8 * h1, t) + spl);
+float hole = step(r, R) * on;
+// Voronoi shards: chunks next to the rim break off too; the rest of the cells form the crack network.
+float2 grid = UV * 15.0; float2 ip = floor(grid); float2 fp = frac(grid);
+float d1 = 8.0; float d2 = 8.0; float2 cell = 0; float2 cpt = 0;
 for (int j = -1; j <= 1; j++) { for (int i = -1; i <= 1; i++) {
   float2 c = ip + float2(i, j);
   float2 h = frac(sin(float2(dot(c, float2(127.1, 311.7)), dot(c, float2(269.5, 183.3)))) * 43758.5453);
   float2 v = float2(i, j) + h - fp; float d = dot(v, v);
-  if (d < d1) { d2 = d1; d1 = d; cell = c; } else if (d < d2) { d2 = d; }
+  if (d < d1) { d2 = d1; d1 = d; cell = c; cpt = (c + h) / 15.0; } else if (d < d2) { d2 = d; }
 } }
 float edge = sqrt(d2) - sqrt(d1);
-float2 o = float2(0.5, 0.45);
-float rnd = frac(sin(dot(cell, float2(12.9898, 78.233))) * 43758.5453);
-float dist = length((cell + 0.5) / N - o);
-float front = P * 0.62;
-float broken = step(dist + rnd * 0.1, front);
-float reach = step(dist, front + 0.1) * step(0.001, P);
-float lineCore = (1.0 - smoothstep(0.0, 0.02, edge)) * reach * (1.0 - broken * 0.5);
-float glow = (1.0 - smoothstep(0.0, 0.1, edge)) * reach;
-float2 dd = UV - o;
-float mask = 1.0 - smoothstep(0.38, 0.5, max(abs(dd.x), abs(dd.y)));
-const float COLS = 70.0; const float ROWS = 40.0;
+float2 cd = cpt - o; float cr = length(cd); float ca = atan2(cd.y, cd.x); if (ca < 0.0) ca += PI2;
+float cs = ca / PI2 * K; float c0 = floor(cs); float ct = cs - c0; float c1 = fmod(c0 + 1.0, K);
+float Rc = base * lerp(0.55 + 0.8 * frac(sin(c0 * 78.233 + 1.7) * 43758.5453), 0.55 + 0.8 * frac(sin(c1 * 78.233 + 1.7) * 43758.5453), ct);
+float crnd = frac(sin(dot(cell, float2(12.9898, 78.233))) * 43758.5453);
+float shard = step(cr, Rc + base * 0.18) * step(0.5, crnd) * on;
+hole = max(hole, shard);
+float outside = 1.0 - hole;
+float nearRim = saturate(1.0 - (r - R) / (base * 0.7 + 0.0001)) * step(R, r);
+float crackNet = (1.0 - smoothstep(0.0, 0.008, edge)) * nearRim * nearRim * outside * on;
+float shardEdge = (1.0 - smoothstep(0.0, 0.02, edge)) * shard * step(R * 0.92, r); // only chunks breaking off the rim
+float rim = saturate(1.0 - abs(r - R) / 0.012) * on;
+float rimCore = saturate(1.0 - abs(r - R) / 0.003) * on;
+// Radial lightning cracks running out from the hole: thin, jagged (triangle-wave zigzag), fading outward.
+float rays = 0.0; float rayGlow = 0.0;
+for (int n = 0; n < 10; n++) {
+  float fn = n;
+  float ang = (fn + frac(sin(fn * 91.3) * 43758.5)) * PI2 / 10.0;
+  float len = base * (0.5 + 1.1 * frac(sin(fn * 17.7) * 9343.1));
+  float da = a - ang; da -= PI2 * round(da / PI2);
+  float zig = (abs(frac(r * 22.0 + fn * 0.37) - 0.5) - 0.25) * 0.02;
+  float dist = abs(da * r + zig);
+  float onRay = step(R, r) * step(r, R + len);
+  float fade = (1.0 - saturate((r - R) / max(len, 0.0001))) * (0.55 + 0.45 * sin(T * (9.0 + fn) + fn * 2.1)); // flicker
+  rays = max(rays, (1.0 - smoothstep(0.0, 0.0022, dist)) * onRay * fade);
+  rayGlow = max(rayGlow, (1.0 - smoothstep(0.0, 0.012, dist)) * onRay * fade);
+}
+rays *= on; rayGlow *= on;
+float lineCore = max(max(rays, rimCore), max(crackNet * 0.85, shardEdge));
+float glow = max(rim, max(rayGlow * 0.6, shardEdge * 0.6));
+// Inside: dense green digital rain on black.
+const float COLS = 110.0; const float ROWS = 70.0;
 float2 g = UV * float2(COLS, ROWS);
 float col = floor(g.x); float row = floor(g.y);
 float ch = frac(sin(col * 91.7) * 4375.85);
-float speed = 6.0 + ch * 10.0;
-float head = fmod(T * speed + ch * 200.0, ROWS + 25.0);
+float speed = 8.0 + ch * 14.0;
+float head = fmod(T * speed + ch * 300.0, ROWS + 30.0);
 float dlt = head - row;
-float trail = dlt >= 0.0 ? exp(-dlt / 7.0) : 0.0;
-float gidx = floor(frac(sin(col * 13.1 + row * 71.7 + floor(T * 3.0 + ch * 10.0) * 0.37) * 9137.1) * 10.0);
+float trail = dlt >= 0.0 ? exp(-dlt / 9.0) : 0.0;
+float gidx = floor(frac(sin(col * 13.1 + row * 71.7 + floor(T * 4.0 + ch * 10.0) * 0.37) * 9137.1) * 10.0);
 float2 lu = frac(g);
 float glyph = Texture2DSampleLevel(Tex, TexSampler, float2((gidx + lu.x) / 10.0, lu.y), 0).r;
 float headGlow = (dlt >= 0.0 && dlt < 1.0) ? 1.0 : 0.0;
-float3 rain = glyph * (float3(0.05, 1.0, 0.25) * trail * 2.5 + float3(0.7, 1.0, 0.8) * headGlow * 3.0);
-float3 c3 = rain * broken + float3(0.54, 0.25, 0.99) * glow * 1.6 + float3(1.0, 0.95, 1.0) * lineCore * 4.0;
-return float4(c3 * mask, saturate(broken + glow * 0.9 + lineCore) * mask);
+float3 rain = glyph * (float3(0.05, 1.0, 0.25) * (0.12 + trail * 2.6) + float3(0.7, 1.0, 0.8) * headGlow * 3.0);
+float3 c3 = rain * hole + float3(0.54, 0.25, 0.99) * glow * 1.8 + float3(1.0, 0.95, 1.0) * lineCore * 3.5;
+float mask = 1.0 - smoothstep(0.44, 0.5, max(abs(dd.x), abs(dd.y)));
+return float4(c3 * mask, saturate(hole + glow * 0.8 + lineCore) * mask);
 """
 crack = custom(sky, SKY_HLSL, ["UV", "P", "T", "Tex"], unreal.CustomMaterialOutputType.CMOT_FLOAT4, -500, 100)
 for src, pin in ((uv, "UV"), (prog, "P"), (tm2, "T"), (texobj, "Tex")):
@@ -171,11 +205,78 @@ mel.connect_material_property(alpha, "", unreal.MaterialProperty.MP_OPACITY)
 mel.recompile_material(sky)
 eal.save_loaded_asset(sky, False)
 
+# ---------------------------------------------------------------- UI textures (HUD / title restyle, user revision)
+def write_rgba_png(path, w, h, pixel):
+    rows = []
+    for y in range(h):
+        row = bytearray(b"\x00")
+        for x in range(w):
+            row += bytes(max(0, min(255, int(c))) for c in pixel(x, y))
+        rows.append(bytes(row))
+
+    def chunk(tag, data):
+        return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+
+    with open(path, "wb") as f:
+        f.write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
+                + chunk(b"IDAT", zlib.compress(b"".join(rows), 9)) + chunk(b"IEND", b""))
+
+
+def smooth(e0, e1, x):
+    t = max(0.0, min(1.0, (x - e0) / (e1 - e0)))
+    return t * t * (3 - 2 * t)
+
+
+def flask_px(x, y):
+    # 64x96 potion: cork, neck, round glass body with red liquid and a highlight.
+    cx, cy, r = 32.0, 62.0, 25.0
+    d = math.hypot(x + 0.5 - cx, y + 0.5 - cy)
+    neck = abs(x + 0.5 - cx) < 9 and 18 <= y < 42
+    cork = abs(x + 0.5 - cx) < 11 and 8 <= y < 18
+    body = d < r
+    if cork:
+        return (120, 82, 50, 255)
+    if not (neck or body):
+        return (0, 0, 0, 0)
+    rim = (body and d > r - 3) or (neck and abs(x + 0.5 - cx) > 6)
+    if rim:
+        return (230, 220, 200, 255)
+    if body and y > 50:
+        k = (y - 50) / 37.0
+        hl = 70 if math.hypot(x - 22, y - 60) < 5 else 0
+        return (200 - 70 * k + hl, 20 + hl, 30 + hl, 255)
+    return (70, 60, 80, 150)  # empty glass
+
+
+UITEX = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_saved_dir()), "UITextures")
+os.makedirs(UITEX, exist_ok=True)
+specs = {
+    "T_UI_GradientH": (256, 8, lambda x, y: (255, 255, 255, 255 * (1 - x / 255.0) ** 1.4)),
+    "T_UI_GradientCenter": (256, 8, lambda x, y: (255, 255, 255, 255 * (1 - abs(2 * x / 255.0 - 1) ** 1.6))),
+    "T_UI_Vignette": (256, 256, lambda x, y: (255, 255, 255, 255 * smooth(0.25, 0.85, math.hypot(x / 255.0 - 0.5, (y / 255.0 - 0.5) * 1.1) * 1.6))),
+    "T_UI_Flask": (64, 96, flask_px),
+}
+ui_tasks = []
+for name, (w, h, fn) in specs.items():
+    path = os.path.join(UITEX, name + ".png")
+    write_rgba_png(path, w, h, fn)
+    t = unreal.AssetImportTask()
+    for k, v in dict(filename=path, destination_path="/Game/UI/Textures", automated=True, replace_existing=True, save=True).items():
+        t.set_editor_property(k, v)
+    ui_tasks.append(t)
+tools.import_asset_tasks(ui_tasks)
+for name in specs:
+    tex = unreal.load_asset(f"/Game/UI/Textures/{name}")
+    tex.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_EDITOR_ICON)
+    tex.set_editor_property("lod_group", unreal.TextureGroup.TEXTUREGROUP_UI)
+    tex.set_editor_property("mip_gen_settings", unreal.TextureMipGenSettings.TMGS_NO_MIPMAPS)
+    eal.save_loaded_asset(tex, False)
+
 # ---------------------------------------------------------------- WBP_* (trees are built in C++, spec MCP rule)
 UI = "/Game/UI"
 for wbp, parent in [("WBP_HUD", "MetaHUDWidget"), ("WBP_BossBar", "MetaBossBarWidget"), ("WBP_Settings", "MetaSettingsWidget"),
                     ("WBP_Debugger", "MetaDebuggerWidget"), ("WBP_ErrorWindow", "MetaErrorWindowWidget"),
-                    ("WBP_DraggableNumber", "MetaDraggableNumberWidget"), ("WBP_BossBar_Overflow", "MetaBossBarOverflowWidget"),
+                    ("WBP_DraggableNumber", "MetaDraggableNumberWidget"),
                     ("WBP_Title", "MetaTitleWidget"), ("WBP_DeathScreen", "MetaDeathScreenWidget")]:
     f = unreal.WidgetBlueprintFactory()
     f.set_editor_property("parent_class", cls(parent))
@@ -306,8 +407,37 @@ def save_level():
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
 
 
-# L_Title: the widget covers the screen; nothing else needed.
+# L_Title (6.4, user revision): a moonlit ruin seen through the title UI. TitleCamera = view target.
+GL_T = "/Game/InfinityBladeGrassLands/Environments/"
 fresh_level("/Game/Maps/L_Title", "MetaTitleGameMode")
+mesh_actor("/Engine/BasicShapes/Plane", (2000, 0, 0), scale=(100, 100, 1), label="Ground",
+           material=GL_T + "Plains/Env_Plains_Terrain/Materials/M_Grass01")
+tm = spawn(unreal.DirectionalLight, (0, 0, 1000), rot=(0, -18, 150), label="Moonlight")
+tm.light_component.set_intensity(1.2)
+tm.light_component.set_light_color(unreal.LinearColor(0.5, 0.6, 1.0, 1.0))
+spawn(unreal.SkyAtmosphere, (0, 0, 0), label="SkyAtmosphere")
+tsl = spawn(unreal.SkyLight, (0, 0, 500), label="SkyLight")
+tsl.light_component.set_intensity(0.5)
+tsl.light_component.set_editor_property("real_time_capture", True)
+tfog = spawn(unreal.ExponentialHeightFog, (0, 0, 0), label="Fog")
+tfog.component.set_editor_property("fog_density", 0.06)
+scatter("/Game/InfinityBladeIceLands/Environments/Ice/DR_Ice_Mountain/StaticMesh/SM_Snowy_Flowers", 900, 3500, 0, (0.35, 0.6), 71, loc=(1600, 0))
+for i, n in enumerate(("01", "02", "03")):
+    scatter(GL_T + f"Plains/Env_Plains_Flora/StaticMesh/SM_Plains_Flowers{n}", 120, 3500, 0, (0.4, 0.7), 72 + i, loc=(1600, 0))
+scatter(GL_T + "Earth/StaticMesh/SM_Cherry_Tree", 30, 5000, 1200, (1.0, 1.5), 75, loc=(2500, 0), corridor=900)
+place_t = lambda mesh, loc, yaw=0.0, s=1.0: mesh_actor(GL_T + mesh, loc, rot=(0, 0, yaw), scale=(s, s, s))
+place_t("Plains/Env_Plains_Ruins/StaticMesh/SM_Plains_CastleArch_02", (2200, 588 * 1.6 / 2, 0), 90, 1.6)
+place_t("Plains/Env_Plains_Statues/StaticMesh/SM_Plains_Angel_Statue_01", (2600, 0, 0), 180, 1.2)
+place_t("Plains/Env_Plains_Ruins/StaticMesh/SM_Plains_Column_Large_Broken_01", (1700, -900, 0), 30)
+place_t("Plains/Env_Plains_Ruins/StaticMesh/SM_Plains_Column_Small_Broken_01", (1500, 800, 0), 0)
+place_t("Plains/Env_Plains_Organic/StaticMesh/SM_Plains_LargeRock_SpireLOD", (9000, 2500, 0), 20, 3.5)
+place_t("Plains/Env_Plains_Organic/StaticMesh/SM_Plains_LargeRock_SpireLOD", (8000, -4000, 0), -40, 3.0)
+glow = spawn(unreal.PointLight, (2500, 0, 450), label="StatueGlow")
+glow.light_component.set_light_color(unreal.LinearColor(0.95, 0.8, 0.45, 1.0))
+glow.light_component.set_intensity(80.0)
+glow.light_component.set_editor_property("attenuation_radius", 1500.0)
+cam = spawn(unreal.CameraActor, (0, 0, 190), rot=(0, 6, 0), label="TitleCamera")
+cam.tags = ["TitleCamera"]
 save_level()
 
 # L_Prologue_FlowerField (4.1, user revision): moonlit flower field → 3 fake minions → ~15 s ruined avenue → small ruin
@@ -438,7 +568,7 @@ holy.light_component.set_light_color(unreal.LinearColor(0.95, 0.82, 0.48, 1.0)) 
 holy.light_component.set_editor_property("attenuation_radius", 4000.0)
 holy.light_component.set_intensity(0.0)
 holy.tags = ["HolyLight"]
-crack_plane = mesh_actor("/Engine/BasicShapes/Plane", (14000, 0, 4000), rot=(90, 0, -90), scale=(95, 95, 1), label="SkyCrack",
+crack_plane = mesh_actor("/Engine/BasicShapes/Plane", (14000, 0, 4000), rot=(90, 0, -90), scale=(130, 130, 1), label="SkyCrack",
                          material="/Game/Core/Materials/M_SkyCrack")
 crack_plane.static_mesh_component.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
 crack_plane.tags = ["SkyCrack"]

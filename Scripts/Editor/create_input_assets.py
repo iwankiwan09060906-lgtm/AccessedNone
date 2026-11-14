@@ -74,8 +74,8 @@ def gameplay(o):
         mapping(o, ia["IA_Move"], "A", modifiers=[negate(o)]),
         mapping(o, ia["IA_Move"], "D"),
         mapping(o, ia["IA_Look"], "Mouse2D", modifiers=[negate_y(o)]),
-        mapping(o, ia["IA_Dodge"], "SpaceBar", triggers=[new(unreal.InputTriggerTap, o, tap_release_time_threshold=TAP_HOLD)]),
-        mapping(o, ia["IA_Dash"], "SpaceBar", triggers=[new(unreal.InputTriggerHold, o, hold_time_threshold=TAP_HOLD)]),
+        # User revision: the dash became a roll — Space rolls on press (IA_Dash stays unmapped).
+        mapping(o, ia["IA_Dodge"], "SpaceBar", triggers=[pressed(o)]),
         mapping(o, ia["IA_Jump"], "F", triggers=[pressed(o)]),
         mapping(o, ia["IA_LockOn"], "MiddleMouseButton", triggers=[pressed(o)]),
         mapping(o, ia["IA_ModifierShift"], "LeftShift", triggers=[new(unreal.InputTriggerDown, o)]),

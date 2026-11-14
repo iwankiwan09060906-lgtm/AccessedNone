@@ -123,8 +123,8 @@ public:
 	// --- Movement ---
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Movement", meta=(Units="cm/s")) float WalkSpeed = 500.f;
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Movement", meta=(Units="cm/s")) float DashSpeed = 900.f;
-	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Movement", meta=(Units="cm/s")) float DodgeSpeed = 1400.f;
-	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Movement") float DodgeDuration = 0.4f;
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Movement", meta=(Units="cm/s")) float DodgeSpeed = 1100.f;
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Player|Movement") float DodgeDuration = 0.55f;
 
 	// --- 3.4 Encounter specifics ---
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category="Encounter") float FakeBossHPMultiplier = 15.f;

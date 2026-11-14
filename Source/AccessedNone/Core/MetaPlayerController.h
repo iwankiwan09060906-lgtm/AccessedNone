@@ -54,8 +54,6 @@ private:
 	void OnMove(const FInputActionValue& Value);
 	void OnLook(const FInputActionValue& Value);
 	void OnDodge();
-	void OnDashStart();
-	void OnDashStop();
 	void OnJump();
 	void OnLockOn();
 	void OnLightAttack();

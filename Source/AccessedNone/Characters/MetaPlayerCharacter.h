@@ -33,6 +33,8 @@ public:
 	bool ActivateAbility(TSubclassOf<UGameplayAbility> AbilityClass);
 	/** Current hero's light combo step or heavy attack animation, stretched to the attack's duration. */
 	void PlayAttackMotion(bool bHeavy, float TotalSeconds);
+	/** Somersault the mesh along WorldDir over Seconds (the roll has no animation asset). */
+	void StartRollVisual(const FVector& WorldDir, float Seconds);
 
 	// --- Used by abilities ---
 	/** Spends stamina if any is left (souls-style: an action is allowed while Stamina > 0). */
@@ -62,12 +64,17 @@ private:
 	void UpdateMoveSpeed();
 	void TickStamina(float DeltaSeconds);
 	void TickLockOn(float DeltaSeconds);
+	void TickRoll(float DeltaSeconds);
 
 	TWeakObjectPtr<AActor> LockOnTarget;
 	int32 HealFlaskCount = 0;
 	double LastStaminaSpendTime = -1000.0;
 	FVector AttackExtent = FVector(100.f, 100.f, 90.f);
 	FVector AttackOffset = FVector(120.f, 0.f, 0.f);
+	FVector RollAxisLocal = FVector::RightVector;
+	FTransform MeshBaseTransform;
+	float RollElapsed = -1.f;
+	float RollSeconds = 0.f;
 	int32 HeroIndex = 0;
 	int32 ComboStep = 0;
 	double LastLightAttackTime = -1000.0;

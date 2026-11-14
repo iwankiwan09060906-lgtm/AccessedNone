@@ -227,9 +227,6 @@ void AMetaPlayerController::SetupInputComponent()
 	if (UInputAction* IA = LoadAction(TEXT("IA_Move"))) { EIC->BindAction(IA, ETriggerEvent::Triggered, this, &AMetaPlayerController::OnMove); }
 	if (UInputAction* IA = LoadAction(TEXT("IA_Look"))) { EIC->BindAction(IA, ETriggerEvent::Triggered, this, &AMetaPlayerController::OnLook); }
 	Bind(TEXT("IA_Dodge"), ETriggerEvent::Triggered, &AMetaPlayerController::OnDodge);
-	Bind(TEXT("IA_Dash"), ETriggerEvent::Triggered, &AMetaPlayerController::OnDashStart);
-	Bind(TEXT("IA_Dash"), ETriggerEvent::Completed, &AMetaPlayerController::OnDashStop);
-	Bind(TEXT("IA_Dash"), ETriggerEvent::Canceled, &AMetaPlayerController::OnDashStop);
 	Bind(TEXT("IA_Jump"), ETriggerEvent::Triggered, &AMetaPlayerController::OnJump);
 	Bind(TEXT("IA_LockOn"), ETriggerEvent::Triggered, &AMetaPlayerController::OnLockOn);
 	Bind(TEXT("IA_LightAttack"), ETriggerEvent::Triggered, &AMetaPlayerController::OnLightAttack);
@@ -258,8 +255,6 @@ void AMetaPlayerController::OnLook(const FInputActionValue& Value)
 }
 
 void AMetaPlayerController::OnDodge()       { if (AMetaPlayerCharacter* C = GetMetaCharacter()) { C->ActivateAbility(UGA_Dodge::StaticClass()); } }
-void AMetaPlayerController::OnDashStart()   { if (AMetaPlayerCharacter* C = GetMetaCharacter()) { C->SetDashing(true); } }
-void AMetaPlayerController::OnDashStop()    { if (AMetaPlayerCharacter* C = GetMetaCharacter()) { C->SetDashing(false); } }
 void AMetaPlayerController::OnJump()        { if (AMetaPlayerCharacter* C = GetMetaCharacter()) { C->TryJump(); } }
 void AMetaPlayerController::OnLockOn()      { if (AMetaPlayerCharacter* C = GetMetaCharacter()) { C->ToggleLockOn(); } }
 void AMetaPlayerController::OnLightAttack() { if (AMetaPlayerCharacter* C = GetMetaCharacter()) { C->ActivateAbility(UGA_LightAttack::StaticClass()); } }

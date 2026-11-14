@@ -11,7 +11,6 @@ class UParticleSystem;
 class USoundBase;
 class UMaterialInstanceDynamic;
 class UMetaErrorWindowWidget;
-class UMetaBossBarOverflowWidget;
 class UMetaDeathScreenWidget;
 class UGameplayAbility;
 
@@ -49,7 +48,6 @@ public:
 	UPROPERTY(EditAnywhere, Category="Prologue") FName MinionEncounterId = TEXT("P1_Minions");
 	UPROPERTY(EditAnywhere, Category="Prologue") TSoftObjectPtr<USoundBase> Music;
 	UPROPERTY(EditAnywhere, Category="Prologue") TSoftObjectPtr<USoundBase> ExplosionSound;
-	UPROPERTY(EditAnywhere, Category="Prologue") TSoftObjectPtr<UParticleSystem> LightningFX;
 	UPROPERTY(EditAnywhere, Category="Prologue") TSoftObjectPtr<UParticleSystem> SummonFX;
 	/** Phase 4 blast: every system is spawned at the player, scaled by ExplosionScale. */
 	UPROPERTY(EditAnywhere, Category="Prologue") TArray<TSoftObjectPtr<UParticleSystem>> ExplosionFX;
@@ -95,7 +93,6 @@ private:
 	UPROPERTY() TArray<TObjectPtr<AMetaBossBase>> SummonedBosses;
 	UPROPERTY() TArray<TObjectPtr<ADefenseEntity>> Entities;
 	UPROPERTY() TObjectPtr<UMetaErrorWindowWidget> ErrorWindow;
-	UPROPERTY() TObjectPtr<UMetaBossBarOverflowWidget> OverflowBar;
 	UPROPERTY() TObjectPtr<UMetaDeathScreenWidget> DeathScreen;
 
 	EProloguePhase Phase = EProloguePhase::Fight;
@@ -104,7 +101,6 @@ private:
 	int32 TutorialStep = -1;
 	float TutorialStepTime = 0.f;
 	float MoveTime = 0.f;
-	float NextLightning = 0.f;
 	double NextEntityTime = -1.0;
 	double FlashStart = -1.0;
 	float DeadSince = -1.f;

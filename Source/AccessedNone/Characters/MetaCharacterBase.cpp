@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
+#include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "TimerManager.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -14,6 +15,9 @@ AMetaCharacterBase::AMetaCharacterBase()
 	AbilitySystem = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystem"));
 	// Default subobject of the actor → the ASC discovers it automatically.
 	Attributes = CreateDefaultSubobject<UMetaCombatAttributeSet>(TEXT("Attributes"));
+	// Fixed camera distance: characters never pull the spring arm in (only level geometry does).
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+	GetMesh()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 }
 
 void AMetaCharacterBase::BeginPlay()

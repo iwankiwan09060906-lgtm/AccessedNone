@@ -25,4 +25,6 @@ private:
 	TWeakObjectPtr<AMetaBossBase> Boss;
 	UPROPERTY() TObjectPtr<UTextBlock> NameText;
 	UPROPERTY() TObjectPtr<UProgressBar> HealthBar;
+	UPROPERTY() TObjectPtr<UProgressBar> Trail;
+	double TrailHold = 0.0;
 };

@@ -144,15 +144,17 @@ void UGA_Dodge::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 	}
 
 	FVector Dir = Character->GetCharacterMovement()->GetLastInputVector().GetSafeNormal2D();
-	if (Dir.IsNearlyZero())
+	const bool bBackstep = Dir.IsNearlyZero();
+	if (bBackstep)
 	{
-		Dir = -Character->GetActorForwardVector(); // backstep
+		Dir = -Character->GetActorForwardVector(); // back roll, still facing forward
 	}
-	if (!Character->IsLockedOn())
+	if (!Character->IsLockedOn() && !bBackstep)
 	{
 		Character->SetActorRotation(Dir.Rotation());
 	}
 
+	Character->StartRollVisual(Dir, S.DodgeDuration);
 	GetAbilitySystemComponentFromActorInfo()->ApplyGameplayEffectToSelf(UGE_IFrame::StaticClass()->GetDefaultObject<UGameplayEffect>(), 1.f, MakeEffectContext(Handle, ActorInfo));
 
 	UAbilityTask_ApplyRootMotionConstantForce* Roll = UAbilityTask_ApplyRootMotionConstantForce::ApplyRootMotionConstantForce(

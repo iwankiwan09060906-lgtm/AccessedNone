@@ -95,6 +95,39 @@ void AMetaPlayerCharacter::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 	TickStamina(DeltaSeconds);
 	TickLockOn(DeltaSeconds);
+	TickRoll(DeltaSeconds);
+}
+
+void AMetaPlayerCharacter::StartRollVisual(const FVector& WorldDir, float Seconds)
+{
+	if (RollElapsed < 0.f)
+	{
+		MeshBaseTransform = GetMesh()->GetRelativeTransform();
+	}
+	// Rotating "up" about (Up x Dir) tips the head toward Dir: a forward roll in that direction.
+	RollAxisLocal = GetActorTransform().InverseTransformVectorNoScale(FVector::CrossProduct(FVector::UpVector, WorldDir.GetSafeNormal2D())).GetSafeNormal();
+	RollSeconds = FMath::Max(Seconds, KINDA_SMALL_NUMBER);
+	RollElapsed = 0.f;
+}
+
+void AMetaPlayerCharacter::TickRoll(float DeltaSeconds)
+{
+	if (RollElapsed < 0.f)
+	{
+		return;
+	}
+	RollElapsed += DeltaSeconds;
+	const float Alpha = FMath::Clamp(RollElapsed / RollSeconds, 0.f, 1.f);
+	const float Angle = UE_TWO_PI * FMath::InterpEaseInOut(0.f, 1.f, Alpha, 1.6f);
+	const FQuat Spin(RollAxisLocal, Angle);
+	// Pivot = capsule center (the mesh origin sits at the feet). Crouch the body slightly while rolling.
+	const FVector Tucked = MeshBaseTransform.GetLocation() * FMath::Lerp(1.f, 0.55f, FMath::Sin(Alpha * PI));
+	GetMesh()->SetRelativeLocationAndRotation(Spin.RotateVector(Tucked), Spin * MeshBaseTransform.GetRotation());
+	if (Alpha >= 1.f)
+	{
+		GetMesh()->SetRelativeTransform(MeshBaseTransform);
+		RollElapsed = -1.f;
+	}
 }
 
 // --- Input -----------------------------------------------------------------

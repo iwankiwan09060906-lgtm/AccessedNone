@@ -52,13 +52,14 @@ private:
 	};
 
 	void HandleDamage(AActor* Target, float Damage, bool bImmune);
-	UProgressBar* MakeBar(UVerticalBox* Box, const FLinearColor& Color, float Width);
 
 	UPROPERTY() TObjectPtr<UCanvasPanel> Canvas;
 	UPROPERTY() TObjectPtr<UWidget> StatusRoot;
 	UPROPERTY() TObjectPtr<UProgressBar> HealthBar;
-	UPROPERTY() TObjectPtr<UProgressBar> FocusBar;
+	UPROPERTY() TObjectPtr<UProgressBar> HealthTrail;
 	UPROPERTY() TObjectPtr<UProgressBar> StaminaBar;
+	UPROPERTY() TObjectPtr<UProgressBar> StaminaTrail;
+	UPROPERTY() TArray<TObjectPtr<class UImage>> FlaskIcons;
 	UPROPERTY() TObjectPtr<UTextBlock> FlaskText;
 	UPROPERTY() TObjectPtr<UMetaBossBarWidget> BossBar;
 	UPROPERTY() TObjectPtr<UTextBlock> ToastText;
@@ -76,4 +77,8 @@ private:
 	FText GlitchTarget;
 	bool bStatusVisible = true;
 	bool bDamageNumbers = true;
+	double HealthTrailHold = 0.0;
+	double StaminaTrailHold = 0.0;
+	static constexpr float HealthBarWidth = 460.f;
+	static constexpr float StaminaBarWidth = 360.f;
 };

@@ -5,6 +5,7 @@
 #include "Characters/BossDataAsset.h"
 #include "Characters/MetaPlayerCharacter.h"
 #include "Combat/MetaCombatAttributeSet.h"
+#include "Core/AccessedNoneSettings.h"
 #include "Core/MetaText.h"
 #include "Meta/EncounterSubsystem.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
@@ -12,6 +13,8 @@
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Components/HorizontalBox.h"
+#include "Components/HorizontalBoxSlot.h"
+#include "Components/Image.h"
 #include "Components/ProgressBar.h"
 #include "Components/SizeBox.h"
 #include "Components/VerticalBox.h"
@@ -34,19 +37,6 @@ namespace
 	}
 }
 
-UProgressBar* UMetaHUDWidget::MakeBar(UVerticalBox* Box, const FLinearColor& Color, float Width)
-{
-	USizeBox* Size = WidgetTree->ConstructWidget<USizeBox>();
-	Size->SetWidthOverride(Width);
-	Size->SetHeightOverride(12.f);
-	UProgressBar* Bar = WidgetTree->ConstructWidget<UProgressBar>();
-	Bar->SetFillColorAndOpacity(Color);
-	Bar->SetPercent(1.f);
-	Size->AddChild(Bar);
-	Cast<UVerticalBoxSlot>(Box->AddChildToVerticalBox(Size))->SetPadding(FMargin(0.f, 2.f));
-	return Bar;
-}
-
 TSharedRef<SWidget> UMetaHUDWidget::RebuildWidget()
 {
 	if (MetaUI::NeedsBuild(WidgetTree))
@@ -60,34 +50,48 @@ TSharedRef<SWidget> UMetaHUDWidget::RebuildWidget()
 		TintSlot->SetAnchors(FAnchors(0.f, 0.f, 1.f, 1.f));
 		TintSlot->SetOffsets(FMargin(0.f));
 
-		// Top-left: HP / FP / stamina.
+		// Bottom-left status (user revision): HP + flasks on the right, stamina below, on a fading dark backdrop.
+		UBorder* Backdrop = WidgetTree->ConstructWidget<UBorder>();
+		Backdrop->SetBrush(MetaUI::TextureBrush(TEXT("T_UI_GradientH"), FLinearColor(0.f, 0.f, 0.f, 0.8f)));
+		Backdrop->SetPadding(FMargin(32.f, 22.f, 140.f, 22.f));
 		UVerticalBox* Status = WidgetTree->ConstructWidget<UVerticalBox>();
-		HealthBar = MakeBar(Status, FLinearColor(0.6f, 0.05f, 0.05f), 360.f);
-		FocusBar = MakeBar(Status, FLinearColor(0.1f, 0.2f, 0.7f), 240.f);
-		StaminaBar = MakeBar(Status, FLinearColor(0.15f, 0.5f, 0.15f), 300.f);
-		Place(Canvas, Status, FVector2D(0, 0), FVector2D(0, 0), FVector2D(40, 36));
+		Backdrop->SetContent(Status);
 
-		// Bottom-left: quick slot (heal flask).
-		UBorder* QuickSlot = WidgetTree->ConstructWidget<UBorder>();
-		QuickSlot->SetBrushColor(MetaUI::Panel);
-		QuickSlot->SetPadding(FMargin(18.f, 10.f));
-		FlaskText = MetaUI::Text(WidgetTree, FText::AsNumber(0), 22, MetaUI::Gold);
-		QuickSlot->SetContent(FlaskText);
-		Place(Canvas, QuickSlot, FVector2D(0, 1), FVector2D(0, 1), FVector2D(40, -40));
+		UHorizontalBox* HealthRow = WidgetTree->ConstructWidget<UHorizontalBox>();
+		Status->AddChildToVerticalBox(HealthRow);
+		HealthRow->AddChildToHorizontalBox(MetaUI::FramedBar(WidgetTree, HealthBarWidth, 24.f, FLinearColor(0.62f, 0.04f, 0.05f), HealthBar, HealthTrail))
+			->SetVerticalAlignment(VAlign_Center);
+		UHorizontalBox* Flasks = WidgetTree->ConstructWidget<UHorizontalBox>();
+		HealthRow->AddChildToHorizontalBox(Flasks)->SetPadding(FMargin(14.f, 0.f, 0.f, 0.f));
+		for (int32 i = 0; i < UAccessedNoneSettings::Get().HealFlaskMax; ++i)
+		{
+			UImage* Icon = WidgetTree->ConstructWidget<UImage>();
+			Icon->SetBrush(MetaUI::TextureBrush(TEXT("T_UI_Flask")));
+			Icon->SetDesiredSizeOverride(FVector2D(30.f, 45.f));
+			Flasks->AddChildToHorizontalBox(Icon)->SetPadding(FMargin(0.f, 0.f, 3.f, 0.f));
+			FlaskIcons.Add(Icon);
+		}
+		FlaskText = MetaUI::Text(WidgetTree, FText::AsNumber(0), 22, MetaUI::Gold, TEXT("Bold"));
+		UHorizontalBoxSlot* CountSlot = Flasks->AddChildToHorizontalBox(FlaskText);
+		CountSlot->SetVerticalAlignment(VAlign_Bottom);
+		CountSlot->SetPadding(FMargin(4.f, 0.f, 0.f, 0.f));
+
+		Status->AddChildToVerticalBox(MetaUI::FramedBar(WidgetTree, StaminaBarWidth, 11.f, FLinearColor(0.42f, 0.58f, 0.22f), StaminaBar, StaminaTrail))
+			->SetPadding(FMargin(0.f, 6.f, 0.f, 0.f));
+		Place(Canvas, Backdrop, FVector2D(0, 1), FVector2D(0, 1), FVector2D(0, -28));
+		StatusRoot = Backdrop;
 
 		TutorialBox = WidgetTree->ConstructWidget<UBorder>();
-		TutorialBox->SetBrushColor(MetaUI::Panel);
-		TutorialBox->SetPadding(FMargin(16.f, 10.f));
-		TutorialText = MetaUI::Text(WidgetTree, FText::GetEmpty(), 18);
+		TutorialBox->SetBrush(MetaUI::TextureBrush(TEXT("T_UI_GradientH"), FLinearColor(0.f, 0.f, 0.f, 0.75f)));
+		TutorialBox->SetPadding(FMargin(28.f, 12.f, 80.f, 12.f));
+		TutorialText = MetaUI::Text(WidgetTree, FText::GetEmpty(), 18, FLinearColor(0.92f, 0.88f, 0.78f));
 		TutorialBox->SetContent(TutorialText);
 		TutorialBox->SetVisibility(ESlateVisibility::Collapsed);
-		Place(Canvas, TutorialBox, FVector2D(0, 1), FVector2D(0, 1), FVector2D(40, -110));
+		Place(Canvas, TutorialBox, FVector2D(0, 0.55f), FVector2D(0, 0.5f), FVector2D::ZeroVector);
 
 		BossBar = CreateWidget<UMetaBossBarWidget>(this, MetaUI::WidgetClass<UMetaBossBarWidget>(TEXT("WBP_BossBar")));
 		BossBar->SetVisibility(ESlateVisibility::Collapsed);
-		Place(Canvas, BossBar, FVector2D(0.5f, 1), FVector2D(0.5f, 0), FVector2D(0, -110)); // top-aligned: a nested user widget has no desired size on the first layout pass
-
-		StatusRoot = Status;
+		Place(Canvas, BossBar, FVector2D(0.5f, 1), FVector2D(0.5f, 0), FVector2D(0, -190)); // top-aligned: a nested user widget has no desired size on the first layout pass
 
 		LogBox = WidgetTree->ConstructWidget<UVerticalBox>();
 		Place(Canvas, LogBox, FVector2D(0, 0), FVector2D(0, 0), FVector2D(40, 130));
@@ -213,7 +217,6 @@ void UMetaHUDWidget::SetStatusVisible(bool bVisible)
 	bStatusVisible = bVisible;
 	const ESlateVisibility V = bVisible ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed;
 	StatusRoot->SetVisibility(V);
-	FlaskText->GetParent()->SetVisibility(V);
 	if (!bVisible)
 	{
 		BossBar->SetVisibility(V);
@@ -228,9 +231,18 @@ void UMetaHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	if (const AMetaPlayerCharacter* P = Cast<AMetaPlayerCharacter>(GetOwningPlayerPawn()))
 	{
 		const UMetaCombatAttributeSet* A = P->GetAttributes();
-		HealthBar->SetPercent(A->GetMaxHealth() > 0.f ? A->GetHealth() / A->GetMaxHealth() : 0.f);
-		StaminaBar->SetPercent(A->GetMaxStamina() > 0.f ? A->GetStamina() / A->GetMaxStamina() : 0.f);
-		FlaskText->SetText(FText::AsNumber(P->GetHealFlaskCount()));
+		const float HP = A->GetMaxHealth() > 0.f ? A->GetHealth() / A->GetMaxHealth() : 0.f;
+		const float SP = A->GetMaxStamina() > 0.f ? A->GetStamina() / A->GetMaxStamina() : 0.f;
+		HealthBar->SetPercent(HP);
+		StaminaBar->SetPercent(SP);
+		HealthTrail->SetPercent(MetaUI::StepTrail(HealthTrail->GetPercent(), HP, InDeltaTime, HealthTrailHold));
+		StaminaTrail->SetPercent(MetaUI::StepTrail(StaminaTrail->GetPercent(), SP, InDeltaTime, StaminaTrailHold));
+		const int32 Flasks = P->GetHealFlaskCount();
+		FlaskText->SetText(FText::Format(FText::FromString(TEXT("x{0}")), FText::AsNumber(Flasks)));
+		for (int32 i = 0; i < FlaskIcons.Num(); ++i)
+		{
+			FlaskIcons[i]->SetRenderOpacity(i < Flasks ? 1.f : 0.18f); // used flasks stay as empty silhouettes
+		}
 	}
 
 	const UEncounterSubsystem* Encounters = GetWorld()->GetSubsystem<UEncounterSubsystem>();

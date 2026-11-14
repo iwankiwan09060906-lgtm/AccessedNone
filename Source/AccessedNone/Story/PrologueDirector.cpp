@@ -11,7 +11,6 @@
 #include "Gimmick/EncounterTriggerBox.h"
 #include "Meta/EncounterSubsystem.h"
 #include "Meta/HintSubsystem.h"
-#include "UI/MetaBossBarOverflowWidget.h"
 #include "UI/MetaDeathScreenWidget.h"
 #include "UI/MetaErrorWindowWidget.h"
 #include "UI/MetaHUDWidget.h"
@@ -43,11 +42,10 @@ namespace
 	constexpr float GlitchAt = 2.f;
 	constexpr float CrackAt = 2.5f;
 	constexpr float CrackOpenSeconds = 4.f;
-	constexpr float LightningInterval = 0.5f;
 	constexpr float EntitiesAt = 6.f;
 	constexpr float CrackPhaseSeconds = 11.f;
-	constexpr float CrackDistance = 6500.f;
-	constexpr float CrackHeight = 2300.f;
+	constexpr float CrackDistance = 10000.f;
+	constexpr float CrackHeight = 3800.f;
 	constexpr float EntitySpawnHeight = 2800.f;
 	constexpr float EntityMinRadius = 500.f;
 	constexpr float EntityMaxRadius = 2600.f;
@@ -56,8 +54,8 @@ namespace
 	constexpr float LogInterval = 1.8f;
 	constexpr float LogsPhaseSeconds = 10.f;
 	// 4.4 forced defeat: the blast kills at KillAt regardless of input (spec: ~5 s)
-	constexpr float ExplodeAt = 2.2f;
-	constexpr float KillAt = 2.5f;
+	constexpr float ExplodeAt = 1.0f;
+	constexpr float KillAt = 1.3f;
 	constexpr int32 SideBlasts = 10;
 	constexpr float BlastLaunch = 2600.f;
 	constexpr double FlashSeconds = 1.6; // single fade, no strobing (spec 12.3)
@@ -68,7 +66,6 @@ namespace
 	constexpr float ErrorWindowAt = 5.f;
 	constexpr int32 DeathScreenZOrder = 15;
 	constexpr int32 ErrorWindowZOrder = 20;
-	constexpr int32 OverflowBarZOrder = 4;
 }
 
 APrologueDirector::APrologueDirector()
@@ -80,7 +77,6 @@ APrologueDirector::APrologueDirector()
 	RootComponent = MusicComponent;
 	Music = FSoftObjectPath(TEXT("/Game/Audio/SW_BGM_Prologue.SW_BGM_Prologue"));
 	ExplosionSound = FSoftObjectPath(TEXT("/Game/Audio/SW_Explosion.SW_Explosion"));
-	LightningFX = FSoftObjectPath(TEXT("/Game/InfinityBladeEffects/Effects/FX_Combat_Lightning/P_DOT_Lightning_01.P_DOT_Lightning_01"));
 	SummonFX = FSoftObjectPath(TEXT("/Game/InfinityBladeEffects/Effects/FX_Ability/Summon/P_Summon_Portal.P_Summon_Portal"));
 	ExplosionFX = {
 		TSoftObjectPtr<UParticleSystem>(FSoftObjectPath(TEXT("/Game/InfinityBladeEffects/Effects/FX_Cines/cinema03/P_CIN_IB_Explosion.P_CIN_IB_Explosion"))),
@@ -346,16 +342,6 @@ void APrologueDirector::TickCrack()
 		if (CrackMID) { CrackMID->SetScalarParameterValue(TEXT("CrackProgress"), Open); }
 		if (HolyLight) { HolyLight->SetIntensity(HolyLightIntensity * (1.f - Open)); }
 		if (HUD) { HUD->SetScreenTint(HolyTint * FLinearColor(1, 1, 1, 1.f - Open)); }
-
-		if (PhaseTime >= NextLightning && CrackActor)
-		{
-			NextLightning = PhaseTime + LightningInterval;
-			if (UParticleSystem* FX = LightningFX.LoadSynchronous())
-			{
-				const FVector Base = CrackActor->GetActorLocation();
-				UGameplayStatics::SpawnEmitterAtLocation(this, FX, Base + FMath::VRand() * FVector(2200.f, 2200.f, 1200.f), FRotator::ZeroRotator, FVector(8.f));
-			}
-		}
 	}
 
 	if (Passed(EntitiesAt))
@@ -415,14 +401,6 @@ void APrologueDirector::TickLogs()
 
 void APrologueDirector::TickExecution()
 {
-	if (Passed(0.f))
-	{
-		if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
-		{
-			OverflowBar = CreateWidget<UMetaBossBarOverflowWidget>(PC, MetaUI::WidgetClass<UMetaBossBarOverflowWidget>(TEXT("WBP_BossBar_Overflow")));
-			OverflowBar->AddToViewport(OverflowBarZOrder);
-		}
-	}
 	if (Passed(ExplodeAt))
 	{
 		Explode();
@@ -498,7 +476,6 @@ void APrologueDirector::TickDead()
 	AMetaPlayerController* PC = Cast<AMetaPlayerController>(UGameplayStatics::GetPlayerController(this, 0));
 	if (Passed(0.f))
 	{
-		if (OverflowBar) { OverflowBar->RemoveFromParent(); }
 		if (HUD)
 		{
 			HUD->SetStatusVisible(false);
